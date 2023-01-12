@@ -42,6 +42,8 @@ Additional `R` demos are available below in html format.
 
 -   ggplot2: Elegant Graphics for Data Analysis: <https://ggplot2-book.org/>
 
+-   Text Mining with R: <https://www.tidytextmining.com/>
+
 ### More `ggplot2` resources
 
 -   The `ggplot2` cheatsheet: <https://www.maths.usyd.edu.au/u/UG/SM/STAT3022/r/current/Misc/data-visualization-2.1.pdf>
