@@ -23,7 +23,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 
 | Lecture | Topic                         | html                                                                               | Rmd                                                                                                              |
 |---------|-----------------------------------------|-----------|-----------|
-| 1       | Introduction and the Grammar of Graphics | [`r icons::fontawesome$solid$laptop`](https://cmu-36315.netlify.app/slides/Lec1#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec1.Rmd) |
+| 1       | Introduction and the Grammar of Graphics | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec1#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec1.Rmd) |
 
 ## R Demos
 
