@@ -22,9 +22,8 @@ knitr::opts_chunk$set(echo = FALSE)
 Lecture slides are available below in html format (see Canvas for PDF format), and the .Rmd files are linked from GitHub.
 
 | Lecture | Topic                         | html                                                                               | Rmd                                                                                                              |
-|-----------|-----------------------------------------|-----------|-----------|
-| 1       | Introduction and the Grammar of Graphics | [`r icons::fontawesome$solid$laptop`](https://cmu-36315.netlify.app/slides/lec1#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website
-/blob/main/slides/lec1.Rmd) |
+|---------|-----------------------------------------|-----------|-----------|
+| 1       | Introduction and the Grammar of Graphics | [`r icons::fontawesome$solid$laptop`](https://cmu-36315.netlify.app/slides/lec1#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/lec1.Rmd) |
 
 ## R Demos
 
