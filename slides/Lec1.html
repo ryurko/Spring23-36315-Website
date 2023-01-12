@@ -1,14 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>36-613: Data Visualization</title>
+    <title>36-315 Lecture 1</title>
     <meta charset="utf-8" />
     <meta name="author" content="Professor Ron Yurko" />
     <script src="libs/header-attrs/header-attrs.js"></script>
-    <script src="libs/fabric/fabric.min.js"></script>
-    <link href="libs/xaringanExtra-scribble/scribble.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-scribble/scribble.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() { window.xeScribble = new Scribble({"pen_color":["#FF0000"],"pen_size":3,"eraser_size":30,"palette":[]}) })</script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -16,7 +12,7 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# 36-613: Data Visualization
+# 36-315 Lecture 1
 ]
 .subtitle[
 ## Introduction and the Grammar of Graphics
@@ -25,7 +21,7 @@ class: center, middle, inverse, title-slide
 ### Professor Ron Yurko
 ]
 .date[
-### 8/29/2022
+### 1/18/2023
 ]
 
 ---
@@ -75,36 +71,116 @@ name: quartet
 
 Need to understand the interplay between graphics and statistical inference
 
+
 ---
 
-## Course Structure (READ THE SYLLABUS):
+### Course Structure (READ THE SYLLABUS):
 
-#### Monday / Wednesday = Lecture
+#### Monday / Wednesday = Lecture, Friday = Lab
 
-+ Will include example code, all slides and additional `R` demos posted on https://cmu-36613.netlify.app/
-
-+ Want class discussion - so __participate and ask questions__
++ Will include example code, all slides and additional `R` demos posted on Canvas and supplementary website https://cmu-36315.netlify.app/ - I want class discussion so __participate and ask questions!__
 
 --
 
-#### 5 Weekly Homework Assignments due Wednesdays by 11:59 PM EST
-
-+ Posted Wednesday mornings and due one week later
+#### Weekly Lab Assignments due Fridays by 11:59 PM EST (short assignments `\(\sim\)` 50 min to complete)
 
 --
 
-#### Two Graphics Critique / Replication of Data Viz in the Wild
+#### Weekly Homework Assignments due Wednesdays by 11:59 PM EST 
 
-+ Submit two graphics critique / replications (with pseudocode) of data visualizations
-you find in the wild (see syllabus for due dates)
+--
+
+#### Two Graphics Critiques of Data Viz in the Wild (due Feb 28 and Mar 31)
 
 + Both data visualizations must be from a __recent source that was posted online within the past month__
 
 --
 
-#### Group EDA Project due Friday October 14th by 11:59 PM EST
+#### Take-home exam on Wednesday, March 1st
 
-+ Each group will write an IMRD report and present their work in 36-611
+--
+
+#### Organized into teams after take-home exam for group project due finals week
+
++ Create public facing HTML file and give oral presentation
+
+---
+
+## Tentative Course Timeline (READ THE SYLLABUS):
+
+#### Weeks 1-6 (HWs 1-4): 
+
+#### Graphics and inference for 1D-4D categorical/quantitative data (including linear regression)
+
+--
+
+#### Week 7: Review session on Monday, take-home lab exam on Wednesday (Mar 1)
+
+--
+
+#### Weeks 8-15 (HWs 5-8): 
+
+#### Visualizing distances, high-dimensional data, spatial data, time series, text data, animations
+
+--
+
+#### Organize into teams, pick a dataset, and make informative graphics about that dataset
+
+--
+
+#### Finals week: Give presentation to me/TAs, post a publicly available file on our department website
+
+  - If you want, we will keep the file up on the department website. It’s
+part of your __data science portfolio__ to show employers/schools.
+
+---
+
+## Previous graphics projects (Netflix)
+
+&lt;img src="figs/lec1/netflix_ex.png" width="65%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Previous graphics projects (NFL)
+
+&lt;img src="figs/lec1/nfl_ex.png" width="70%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Previous graphics projects (Chocolate)
+
+&lt;img src="figs/lec1/choc_ex.png" width="75%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Course Logistics (READ THE SYLLABUS):
+
+- __All homework/lab assignments will be in RMarkdown__. You’ll generate a PDF, which you’ll submit on Gradescope
+
+- Make sure R and RStudio are installed on your computer! 
+
+- __Lab0 due TOMORROW Jan 19 at 11:59 PM EST__: Make sure you can install R and RStudio, install and load `tidyverse`, and post to Gradescope
+
+  - Have any installation issues? Post to the course Piazza!
+
+--
+
+- __Piazza__: all questions about lecture material, HWs, exam, and projects
+
+  - __Do NOT share code on Piazza__
+
+- Only email for address adminstrative/logistic issues
+
+--
+
+- __Lab attendance on Friday is mandatory__ - if you submit a lab assignment but don’t attend lab, __we will take off 20pts__
+
+  - Questions about lab assignments will only be answered during lab!
+  
+  - If you need to miss a lab due to illness, interviews, emergencies, etc., email me 48 hours in advance!
 
 ---
 
@@ -119,6 +195,8 @@ you find in the wild (see syllabus for due dates)
 ### Visualize statistical analyses to facilitate communication.
 
 ### Pinpoint the statistical claims you can/cannot make from graphics.
+
+### Write and speak publicly about statistical graphics.
 
 --
 
@@ -135,13 +213,14 @@ Data are often stored in __tabular__ (or matrix) form:
 
 ```
 ## # A tibble: 5 × 8
-##   species island    bill_length_mm bill_depth_mm flipper_length_mm body_mass_g sex     year
-##   &lt;fct&gt;   &lt;fct&gt;              &lt;dbl&gt;         &lt;dbl&gt;             &lt;int&gt;       &lt;int&gt; &lt;fct&gt;  &lt;int&gt;
-## 1 Adelie  Torgersen           39.1          18.7               181        3750 male    2007
-## 2 Adelie  Torgersen           39.5          17.4               186        3800 female  2007
-## 3 Adelie  Torgersen           40.3          18                 195        3250 female  2007
-## 4 Adelie  Torgersen           NA            NA                  NA          NA &lt;NA&gt;    2007
-## 5 Adelie  Torgersen           36.7          19.3               193        3450 female  2007
+##   species island    bill_length_mm bill_depth_mm flipper_l…¹ body_…² sex    year
+##   &lt;fct&gt;   &lt;fct&gt;              &lt;dbl&gt;         &lt;dbl&gt;       &lt;int&gt;   &lt;int&gt; &lt;fct&gt; &lt;int&gt;
+## 1 Adelie  Torgersen           39.1          18.7         181    3750 male   2007
+## 2 Adelie  Torgersen           39.5          17.4         186    3800 fema…  2007
+## 3 Adelie  Torgersen           40.3          18           195    3250 fema…  2007
+## 4 Adelie  Torgersen           NA            NA            NA      NA &lt;NA&gt;   2007
+## 5 Adelie  Torgersen           36.7          19.3         193    3450 fema…  2007
+## # … with abbreviated variable names ¹​flipper_length_mm, ²​body_mass_g
 ```
 
 --
@@ -248,7 +327,7 @@ Or equivalently using `%&gt;%`:
 
 __Nothing is displayed__
 
-&lt;img src="figs/Lec1/unnamed-chunk-3-1.png" width="100%" /&gt;
+&lt;img src="figs/lec1/unnamed-chunk-6-1.png" width="100%" /&gt;
 
 ]
 
@@ -290,7 +369,7 @@ penguins %&gt;%
 
 __And now we have a scatterplot!__
 
-&lt;img src="figs/Lec1/unnamed-chunk-5-1.png" width="100%" /&gt;
+&lt;img src="figs/lec1/unnamed-chunk-8-1.png" width="100%" /&gt;
 
 ]
 
@@ -329,9 +408,9 @@ penguins %&gt;%
 
 .pull-right[
 
-__You will be covering more basics in HW1__
+__You will be covering more basics in Lab1__
 
-&lt;img src="figs/Lec1/unnamed-chunk-6-1.png" width="100%" /&gt;
+&lt;img src="figs/lec1/unnamed-chunk-9-1.png" width="100%" /&gt;
 
 ]
 
@@ -426,21 +505,20 @@ class: center, middle
 
 # Next time: 1D categorical data
 
+### Lab0 due tomorrrow night
+
+### Lectures will be remote until Feb 8th
+
+### Pay attention to Canvas announcements
+
 Recommended reading: 
 
-[CW Chapter 2 Visualizing data: Mapping data onto aesthetics](https://clauswilke.com/dataviz/aesthetic-mapping.html)
+[CW - Chapter 2 Visualizing data: Mapping data onto aesthetics](https://clauswilke.com/dataviz/aesthetic-mapping.html) and [Chapter 17 The principle of proportional ink](https://clauswilke.com/dataviz/proportional-ink.html)
 
-[CW Chapter 17 The principle of proportional ink](https://clauswilke.com/dataviz/proportional-ink.html)
-
-[KH Chapter 1 Look at data](https://socviz.co/lookatdata.html#lookatdata)
-
-[KH Chapter 3 Make a plot](https://socviz.co/makeplot.html#makeplot)
+[KH - Chapter 1 Look at data](https://socviz.co/lookatdata.html#lookatdata) and  [Chapter 3 Make a plot](https://socviz.co/makeplot.html#makeplot)
 
 
-Lecture slides created via the `R` packages:
-
-[**xaringan**](https://github.com/yihui/xaringan)&lt;br&gt;
-[gadenbuie/xaringanthemer](https://github.com/gadenbuie/xaringanthemer)
+Lecture slides created via the [**xaringan**](https://github.com/yihui/xaringan) `R` packages
 
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
