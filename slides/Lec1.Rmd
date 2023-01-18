@@ -26,7 +26,7 @@ knitr::opts_chunk$set(
   message = FALSE, 
   warning = FALSE,
   hiline = TRUE,
-  fig.path = "figs/Lec1/"
+  fig.path = "figs/lec1/"
 )
 ```
 
@@ -45,7 +45,7 @@ style_duo_accent(
 
 *   Assistant Teaching Professor
 
-*   Finished Phd in Statistics @ CMU in May 2022
+*   Finished PhD in Statistics @ CMU in May 2022
 
 *   Previously BS in Statistics @ CMU in 2015
 
@@ -86,7 +86,7 @@ Need to understand the interplay between graphics and statistical inference
 
 #### Monday / Wednesday = Lecture, Friday = Lab
 
-+ Will include example code, all slides and additional `R` demos posted on Canvas and supplementary website https://cmu-36315.netlify.app/ - I want class discussion so __participate and ask questions!__
++ Will include example code, all slides and additional `R` demos posted on Canvas and supplementary website https://cmu-36315-spring23.netlify.app/ - I want class discussion so __participate and ask questions!__
 
 --
 
