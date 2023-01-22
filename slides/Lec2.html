@@ -1,18 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>36-613: Data Visualization</title>
+    <title>36-315 Lecture 2</title>
     <meta charset="utf-8" />
     <meta name="author" content="Professor Ron Yurko" />
     <script src="libs/header-attrs/header-attrs.js"></script>
-    <script src="libs/fabric/fabric.min.js"></script>
-    <link href="libs/xaringanExtra-scribble/scribble.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-scribble/scribble.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() { window.xeScribble = new Scribble({"pen_color":["#FF0000"],"pen_size":3,"eraser_size":30,"palette":[]}) })</script>
-    <script src="libs/clipboard/clipboard.min.js"></script>
-    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
-    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
   <body>
@@ -20,7 +12,7 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# 36-613: Data Visualization
+# 36-315 Lecture 2
 ]
 .subtitle[
 ## 1D Categorical Data
@@ -29,7 +21,7 @@ class: center, middle, inverse, title-slide
 ### Professor Ron Yurko
 ]
 .date[
-### 8/31/2022
+### 1/23/2023
 ]
 
 ---
@@ -40,7 +32,124 @@ class: center, middle, inverse, title-slide
 
 
 
-## 1D categorical data
+&lt;img src="https://github.com/ryurko/SURE22-examples/blob/main/figures/lecture_examples/nyt_ex.png?raw=true" width="110%" style="display: block; margin: auto;" /&gt;
+
+--
+
+#### [Think twice before you spiral](https://junkcharts.typepad.com/junk_charts/nyt/)
+
+---
+
+## [Edward Tufte's](https://www.edwardtufte.com/tufte/) Principles of Data Visualization
+
+Graphics: visually display measured quantities by combining points, lines, coordinate systems, numbers, symbols, words, shading, color
+
+--
+
+#### Goal is to show data and/or communicate a story!
+
+--
+
++ Induce viewer to think about substance, __not graphical methodology__
+
++ Make large, complex datasets more coherent 
+
++ Encourage comparison of different pieces of data
+
++ __Describe, explore, and identify relationships__
+
++ __Avoid data distortion and data decoration__
+
++ Use consistent graph design
+
+--
+
+#### Avoid graphs that lead to misleading conclusions!
+
+---
+
+
+## Conceptual Review
+
+### Tidy data structure
+
+### Grammar of Graphics
+
++ System for mapping data into visualizations, practice GoG framework with `ggplot2` library
+
+### Principles for Statistical Graphics
+
+
+### Today: 1D Categorical Data
+
++ Briefly talk about variable types
+
++ Examples of different graphs for visualizing 1D categorical data
+
+---
+
+## Reminder: `tidy` data structure
+
+Data are often stored in __tabular__ (or matrix) form:
+
+
+```
+## # A tibble: 5 × 8
+##   species island    bill_length_mm bill_depth_mm flipper_l…¹ body_…² sex    year
+##   &lt;fct&gt;   &lt;fct&gt;              &lt;dbl&gt;         &lt;dbl&gt;       &lt;int&gt;   &lt;int&gt; &lt;fct&gt; &lt;int&gt;
+## 1 Adelie  Torgersen           39.1          18.7         181    3750 male   2007
+## 2 Adelie  Torgersen           39.5          17.4         186    3800 fema…  2007
+## 3 Adelie  Torgersen           40.3          18           195    3250 fema…  2007
+## 4 Adelie  Torgersen           NA            NA            NA      NA &lt;NA&gt;   2007
+## 5 Adelie  Torgersen           36.7          19.3         193    3450 fema…  2007
+## # … with abbreviated variable names ¹​flipper_length_mm, ²​body_mass_g
+```
+
+--
+
++ Each row `==` unit of observation, e.g., penguins
+
+--
+
++ Each column `==` variable/measurement about each observation, e.g., `flipper_length_mm`
+
+--
+
++ Known as a `data.frame` in base `R` and `tibble` in the `tidyverse`
+
+--
+
++ Two main variable types: quantitative and categorical
+
+---
+
+## Variable Types
+
++ Most visualizations are about understanding the distribution of different variables (which are stored in columns of tabular/matrix data)
+
++ The __variable type__ often dictates the type of graphs you should make
+
+--
+
++ There are two main types of variables:
+
+1. __Quantitative__
+
+  + Discrete (i.e., counts, usually recorded as whole numbers), examples: number of likes/retweets, number of times word is used
+  
+  + Continuous (any real number), examples: income, age, miles run, heart rate
+  
+  + In `R` these are usually classified as `integer` or `numeric`
+  
+--
+
+2. __Categorical__
+
+Today: Discuss what to do when you have a single column of categorical data (i.e., 1D categorical data)
+
+---
+
+## Categorical variables
 
 
 Two different versions of categorical:
@@ -64,6 +173,8 @@ Two different versions of categorical:
   + `R` will always treat categorical variables as ordinal! Defaults to alphabetical...
   
   + We will need to manually define the `factor` levels
+  
+  + `tidyverse` makes these [easy to work with!](https://forcats.tidyverse.org/)
 
 
 
@@ -75,23 +186,18 @@ Two different versions of categorical:
 
 + Each observed value `\(x_i\)` can only belong to one category level `\(\{ C_1, C_2, \dots \}\)`
 
---
 
-We're going to look at `penguins` data from the [`palmerpenguins`](https://allisonhorst.github.io/palmerpenguins/) package, specifically the `species` column:
-
-
-```r
-library(palmerpenguins)
-head(penguins$species)
-```
-
-```
-## [1] Adelie Adelie Adelie Adelie Adelie Adelie
-## Levels: Adelie Chinstrap Gentoo
-```
+#### How could we summarize these data?
 
 
-#### How could we summarize these data? What information would you report?
+
+
+
+#### What information would you report?
+
+
+
+
 
 --
 
@@ -155,7 +261,7 @@ penguins %&gt;%
 
 .pull-right[
 
-&lt;img src="figs/Lec2/unnamed-chunk-4-1.png" width="100%" /&gt;
+&lt;img src="figs/Lec2/unnamed-chunk-5-1.png" width="100%" /&gt;
 
 ]
 
@@ -166,6 +272,28 @@ penguins %&gt;%
 &lt;img src="https://d33wubrfki0l68.cloudfront.net/70a3b18a1128c785d8676a48c005ee9b6a23cc00/7283c/images/visualization-stat-bar.png" width="100%" /&gt;
 
 From [Chapter 3 of R for Data Science](https://r4ds.had.co.nz/data-visualisation.html)
+
+
+---
+
+## Crimes against bar charts
+
+
+&lt;img src="https://venngage-wordpress.s3.amazonaws.com/uploads/2021/01/womenicons.jpg" width="45%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Crimes against bar charts
+
+&lt;img src="https://pbs.twimg.com/media/Ee6WX52WsAAP9wT.png" width="45%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Crimes against bar charts
+
+&lt;img src="https://external-preview.redd.it/VZba9uBFSw_Z_8eCF_XV_NYnQjfCm87Org180UEDiog.jpg?auto=webp&amp;s=e6c4ae8f40a55dffb8dc0d2c7f73e8e3b845200d" width="80%" style="display: block; margin: auto;" /&gt;
+
 
 
 ---
@@ -201,242 +329,11 @@ penguins %&gt;%
 
 .pull-right[
 
-&lt;img src="figs/Lec2/unnamed-chunk-6-1.png" width="100%" /&gt;
-
-&lt;img src="figs/Lec2/unnamed-chunk-7-1.png" width="100%" /&gt;
-
-]
-
----
-
-## What does a bar chart show?
-
-#### Marginal Distribution
-
-- Assume categorical variable `\(X\)` has `\(K\)` categories: `\(C_1, \dots, C_K\)`
-
-- __True__ marginal distribution of `\(X\)`: 
-
-$$
-P(X = C_j) = p_j,\ j \in \{ 1, \dots, K \}
-$$
-
---
-
-#### We have access to the Empirical Marginal Distribution
-
-- Observed distribution of `\(X\)`, our best estimate (MLE) of the marginal distribution of `\(X\)`: `\(\hat{p}_1\)`, `\(\hat{p}_2\)`, `\(\dots\)`, `\(\hat{p}_K\)`
-
-
-
-```r
-# Proportion estimates for penguins species
-table(penguins$species) / nrow(penguins)
-```
-
-```
-## 
-##    Adelie Chinstrap    Gentoo 
-## 0.4418605 0.1976744 0.3604651
-```
-
-
----
-
-## Bar charts with proportions
-
-.pull-left[
-
-- [`after_stat()`](https://ggplot2.tidyverse.org/reference/aes_eval.html) indicates the aesthetic mapping is performed after statistical transformation
-
-- Use `after_stat(count)` to access the `stat_count()` called by `geom_bar()`
-
-
-```r
-penguins %&gt;% 
-  ggplot(aes(x = species)) +
-* geom_bar(aes(y = after_stat(count) /
-*                sum(after_stat(count)))) +
-  labs(y = "Proportion")
-```
-
-- Kind of weird code to use...
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec2/unnamed-chunk-9-1.png" width="100%" /&gt;
-
-]
-
----
-
-## Compute and display the proportions directly
-
-
-.pull-left[
-
-
-```r
-penguins %&gt;%
-* group_by(species) %&gt;%
-* summarize(count = n(),
-*           .groups = "drop") %&gt;%
-* mutate(total = sum(count),
-*        prop = count / total) %&gt;%
-  ggplot(aes(x = species)) +
-  geom_bar(aes(y = prop),
-           stat = "identity") 
-```
-
-- Use `group_by()`, `summarize()`, and `mutate()` in a pipeline to compute then display the proportions directly
-
-- Need to indicate we are displaying the `y` axis as given, i.e., the identity function
-
-]
-
-.pull-right[
-
 &lt;img src="figs/Lec2/unnamed-chunk-10-1.png" width="100%" /&gt;
-
-]
-
-
----
-
-## Statistical inference for proportions
-
-- Our estimate for `\(p_j\)` is `\(\hat{p}_j = \frac{n_j}{n}\)`, compute the standard error as:
-
-$$
-SE(\hat{p}_j) = \sqrt{\frac{\hat{p}_j(1 - \hat{p}_j)}{n}}
-$$
-
---
-
-- Compute `\(\alpha\)`-level __confidence interval__ (CI) as `\(\hat{p}_j \pm z_{1 - \alpha / 2} \cdot SE(\hat{p}_j)\)`
-
-- Good rule-of-thumb: construct 95% CI using `\(\hat{p}_j \pm 2 \cdot SE(\hat{p}_j)\)`
-
---
-
-- Just an approximation justified by CLT, so CI could include values outside of [0,1]
-
---
-
-#### Add CIs to bars for 1D categorical data
-
-- Need to remember each CI is for each `\(\hat{p}_j\)` marginally, not jointly
-
-- Have to be careful with __multiple testing__ 
-
----
-
-## Add standard errors to bars
-
-.pull-left[
-
-
-```r
-penguins %&gt;%
-  group_by(species) %&gt;% 
-  summarize(count = n(), .groups = "drop") %&gt;% 
-  mutate(total = sum(count), 
-         prop = count / total,
-*        se = sqrt(prop * (1 - prop) / total),
-*        lower = prop - 2 * se,
-*        upper = prop + 2 * se) %&gt;%
-  ggplot(aes(x = species)) +
-  geom_bar(aes(y = prop),
-           stat = "identity") +
-* geom_errorbar(aes(ymin = lower,
-*                   ymax = upper),
-*               color = "red")
-```
-
-
-- If CIs don’t overlap `\(\rightarrow\)` likely significant difference
-
-- If CIs overlap a little `\(\rightarrow\)` ambiguous
-
-- If CIs overlap a lot `\(\rightarrow\)` no significant difference
-
-]
-
-.pull-right[
 
 &lt;img src="figs/Lec2/unnamed-chunk-11-1.png" width="100%" /&gt;
 
 ]
-
----
-
-## Why does this matter?
-
-.pull-left[
-
-&lt;img src="figs/Lec2/unnamed-chunk-12-1.png" width="100%" /&gt;
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec2/unnamed-chunk-13-1.png" width="100%" /&gt;
-
-]
-
----
-
-## Graphs can appear the same with very different statistical conclusions - mainly due to sample size
-
-.pull-left[
-
-&lt;img src="figs/Lec2/unnamed-chunk-14-1.png" width="100%" /&gt;
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec2/unnamed-chunk-15-1.png" width="100%" /&gt;
-
-]
-
----
-
-## Useful to order categories by frequency with [`forcats`](https://forcats.tidyverse.org/)
-
-.pull-left[
-
-
-```r
-penguins %&gt;%
-  group_by(species) %&gt;% 
-  summarize(count = n(), .groups = "drop") %&gt;% 
-  mutate(total = sum(count), 
-         prop = count / total,
-         se = sqrt(prop * (1 - prop) / total), 
-         lower = prop - 2 * se, 
-         upper = prop + 2 * se,
-         species = 
-*          fct_reorder(species, prop)) %&gt;%
-  ggplot(aes(x = species)) +
-  geom_bar(aes(y = prop),
-           stat = "identity") +
-  geom_errorbar(aes(ymin = lower, 
-                    ymax = upper), 
-                color = "red") 
-```
-
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec2/unnamed-chunk-16-1.png" width="100%" /&gt;
-
-]
-
 
 ---
 
@@ -457,7 +354,7 @@ category
 ```r
 penguins %&gt;% 
   ggplot(aes(fill = species, x = "")) + 
-* geom_bar(aes(y = after_stat(count))) +
+  geom_bar() + 
 * coord_polar(theta = "y")
 ```
 
@@ -466,51 +363,141 @@ penguins %&gt;%
 
 .pull-right[
 
-&lt;img src="figs/Lec2/unnamed-chunk-17-1.png" width="100%" /&gt;
+&lt;img src="figs/Lec2/unnamed-chunk-12-1.png" width="100%" /&gt;
 
 ]
 
 ---
 
-## It's true...
+## The worst pie chart ever made...
+
+&lt;img src="https://flowingdata.com/wp-content/uploads/2009/11/Fox-News-pie-chart.png" width="60%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## This is true...
 
 &lt;img src="https://cdn-media-1.freecodecamp.org/images/5S8tNA6GCGEl-ANW7fu20o63I35bZ46Trsdy" width="50%" style="display: block; margin: auto;" /&gt;
 
+
 ---
 
-## But why?...
-
+## Rose Diagrams
 
 .pull-left[
 
-&lt;img src="https://datachant.com/wp-content/uploads/2019/10/Bad-Pie-Chart-1.png" width="90%" style="display: block; margin: auto;" /&gt;
+- Circle sections for each category (like pie charts)
+
+- All sections ("petals") have the same width/arc/angle
+
+- Radius of each section is proportional to category frequency
+
+
+
+```r
+penguins %&gt;% 
+  ggplot(aes(x = species)) + 
+  geom_bar(fill = "darkblue") +
+  coord_polar()
+```
 
 
 ]
-
---
 
 .pull-right[
-&lt;img src="https://www.reactiongifs.us/wp-content/uploads/2013/05/this_is_useless_star_wars.gif" width="90%" style="display: block; margin: auto;" /&gt;
+
+&lt;img src="figs/Lec2/unnamed-chunk-15-1.png" width="100%" /&gt;
+
 ]
 
-#### You should almost always stick to bars!
+---
+
+## Rose Diagrams
+
+.pull-left[
+
+- Circle sections for each category (like pie charts)
+
+- All sections ("petals") have the same width/arc/angle
+
+- Radius of each section is proportional to category frequency
+
+
+
+```r
+penguins %&gt;% 
+  ggplot(aes(x = species)) + 
+  geom_bar(fill = "darkblue") +
+  coord_polar() +
+* scale_y_sqrt()
+```
+
+- Made popular by [Florence Nightingale](https://en.wikipedia.org/wiki/Florence_Nightingale)
+
+]
+
+.pull-right[
+
+&lt;img src="figs/Lec2/unnamed-chunk-16-1.png" width="100%" /&gt;
+
+]
+
+---
+
+## [Florence Nightingale's](https://www.datavis.ca/gallery/flo.php) Rose Diagram 
+
+&lt;img src="https://daily.jstor.org/wp-content/uploads/2020/08/florence_nightingagle_data_visualization_visionary_1050x700.jpg" width="75%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Similar visual style: radar charts...
+
+&lt;img src="https://images.squarespace-cdn.com/content/v1/5a5411ed268b96969a401835/1557014209591-GB94ZAMG55P0X1XHYI53/radar+chart.jpg?format=500w" width="55%" style="display: block; margin: auto;" /&gt;
+
 
 ---
 class: center, middle
 
-# Next time: 2D categorical data
+## We will NOT make radar charts
 
-Recap: __Make bar charts with standard errors for 1D categorical data__
+&lt;blockquote class="twitter-tweet"&gt;&lt;p lang="en" dir="ltr"&gt;A reminder, blatantly plagiarized from &lt;a href="https://twitter.com/stat_sam?ref_src=twsrc%5Etfw"&gt;@stat_sam&lt;/a&gt;, of why radar plots are misleading. Eye focuses on area, not length. &lt;a href="https://t.co/Dk3gcn1GD1"&gt;pic.twitter.com/Dk3gcn1GD1&lt;/a&gt;&lt;/p&gt;&amp;mdash; Luke Bornn (@LukeBornn) &lt;a href="https://twitter.com/LukeBornn/status/864856335191388162?ref_src=twsrc%5Etfw"&gt;May 17, 2017&lt;/a&gt;&lt;/blockquote&gt; &lt;script async src="https://platform.twitter.com/widgets.js" charset="utf-8"&gt;&lt;/script&gt;
+
+
+---
+
+## Main Takeaways
+
++ 1D Categorical Data: look at counts, frequencies, percentages
+
++ Visuals for 1D Categorical Data: Area plots, where area `\(\propto\)` counts/frequencies/percentages
+
+  + Bar charts (you should pretty much always just make a bar chart)
+  
+  + Spine charts (will be more useful with more dimensions)
+  
+  + Pie charts (just don't do it)
+  
+  + Rose diagrams (temporal context can justify usage)
+  
+--
+
++ So far: displaying statistics, but not inference and uncertainty!
+
+---
+class: center, middle
+
+# Next time: Quantify and Display Uncertainty for 1D Categorical Data
+
+### HW1 is posted and due Wednesday Feb 1 by 11:59 PM
 
 Recommended reading: 
 
 [CW Chapter 10 Visualizing proportions](https://clauswilke.com/dataviz/visualizing-proportions.html)
 
-[CW Chapter 16.2 Visualizing the uncertainty of point estimates](https://clauswilke.com/dataviz/visualizing-uncertainty.html#visualizing-the-uncertainty-of-point-estimates)
-
-
 [KH Chapter 3 Make a plot](https://socviz.co/makeplot.html#makeplot)
+
 
 
 
