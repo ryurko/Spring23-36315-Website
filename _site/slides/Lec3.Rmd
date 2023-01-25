@@ -571,13 +571,13 @@ fake_counts %>%
 
 - Comparing overlap of two CIs is __NOT__ exactly the same as directly testing for a significant difference...
 
-  - Really you want CI( $\hat{p}_1 - \hat{p}_2$ ), not CI( $\hat{p_1}$ ) and CI( $\hat{p_2} $)
+  - Really you want CI( $\hat{p}_1 - \hat{p}_2$ ), not CI( $\hat{p_1}$ ) and CI( $\hat{p_2}$ )
   
   - CI( $\hat{p_1}$ ) and CI( $\hat{p_2}$ ) not overlapping implies $0 \notin$ CI( $\hat{p}_1 - \hat{p}_2$ )
   
 --
 
-  - _However_ CI( $\hat{p_1}$ ) and CI( $\hat{p_2}$ ) overlaping __DOES NOT__ imply $0 \in$ CI( $\hat{p}_1 - \hat{p}_2$ ) 
+  - _However_ CI( $\hat{p_1}$ ) and CI( $\hat{p_2}$ ) overlapping __DOES NOT__ imply $0 \in$ CI( $\hat{p}_1 - \hat{p}_2$ ) 
 
 
 --
