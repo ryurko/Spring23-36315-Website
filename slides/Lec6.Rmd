@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "2D Quantitative Data"  
+title: "36-315 Lecture 6"
+subtitle: "1D Quantitative Data"  
 author: 
   - "Professor Ron Yurko"
-date: '9/19/2022'
+date: '2/6/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec6/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,582 +36,585 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
 
-```{r, include = FALSE}
+```{r, include = FALSE, warning = FALSE}
 library(tidyverse)
 library(palmerpenguins)
 ```
 
 
-## Let's talk about the project..
+## Conceptual Review
 
-#### IDMRAD report, due Friday, Oct 14th at 5 PM EDT 
+#### Reminder: HW2 is due Wednesday, Graphics Critique #1 is due Feb 28th
 
-- Read through the rubric file on Canvas in the `project` folder
+So far we've only talked about categorical data...
 
-- You will find your team's assigned project dataset in [this google sheet](https://docs.google.com/spreadsheets/d/1XRCC8WO8O1-fy9nDf1pQ_15XxYYNGU6Z/edit?usp=sharing&ouid=110931742237993657587&rtpof=true&sd=true)
++ Bar charts and confidence intervals are a good way to visualize 2D categorical data (and inference)
 
-- Look at the example IDMRAD paper for how to structure reports (also covered in rubric)
++ Mosaic plots are a good way to do the same for 2D categorical data
 
-  - Your report will include many more (and higher quality) graphics!
+  + Plots marginal distribution $P(A)$ and conditional distribution $P(B|A)$
   
-  - Also required to make an interactive Shiny app/dashboard with link in report
+  + Colored by Pearson residuals, where $|r_{ij}| > 2$ denotes "signficance" (at $\alpha = 0.05$)
   
-- The remaining HWs will include exercises related to your projects
++ __Today: 1D quantitative data__
+
+  + For this class, we'll focus on visualization issues
+  
+  + Move to inference in next class and more next week
 
 ---
 
-## 2D quantitative data
+# 1D quantitative data
 
-- We're working with two variables: $(X, Y) \in \mathbb{R}^2$, i.e., dataset with $n$ rows and 2 columns
+Observations are collected into a vector $(x_1, \dots, x_n)$, $x_i \in \mathbb{R}$ (or maybe $\mathbb{R}^+$, $\mathbb{Z}$)
+
+Common __summary statistics__ for 1D quantitative data:
 
 --
 
-- Goals:
++ __Center__: Mean, median, weighted mean, mode
 
-  - describing the relationships between two variables
-  
-  - describing the conditional distribution $Y | X$ via regression analysis
-  
-  - describing the joint distribution $X,Y$ via contours, heatmaps, etc.
+  + Related to the first moment, i.e., $\mathbb{E}[X]$
   
 --
 
-- Few big picture ideas to keep in mind:
++ __Spread__: Variance, range, min/max, quantiles, IQR
 
-  - scatterplots are by far the most common visual
+  + Related to the second moment, i.e., $\mathbb{E}[X^2]$
   
-  - regression analysis is by far the most popular analysis (you have a whole class on this...)
-  
-  - relationships may vary across other variables, e.g., categorical variables
-  
----
-
-## Making scatterplots with `geom_point()`
-
-.pull-left[
-
-
-```{r start-plot, eval = FALSE}
-penguins %>%
-  ggplot(aes(x = flipper_length_mm,
-             y = body_mass_g)) +
-  geom_point() #<<
-```
-
-- Displaying the joint distribution
-
-- What is the __obvious flaw__ with this plot?
-
-]
-
-.pull-right[
-
-```{r ref.label="start-plot", echo = FALSE, fig.height=7}
-```
-
-]
-
-
----
-
-## Making scatterplots: ALWAYS adjust the `alpha`
-
-.pull-left[
-
-
-```{r alpha-plot, eval = FALSE}
-penguins %>%
-  ggplot(aes(x = flipper_length_mm,
-             y = body_mass_g)) +
-  geom_point(alpha = 0.5) #<<
-```
-
-- Adjust the transparency of points via `alpha` to __visualize overlap__ 
-
-- Provides better understanding of joint frequency
-
-- TEspecially important with larger datasets
-
-
-
-]
-
-.pull-right[
-
-```{r ref.label="alpha-plot", echo = FALSE, fig.height=7}
-```
-
-]
-
----
-
-## Displaying trend lines: linear regression
-
-.pull-left[
-
-```{r line-plot, eval = FALSE}
-penguins %>%
-  ggplot(aes(x = flipper_length_mm, 
-             y = body_mass_g)) +
-  geom_point(alpha = 0.5) + 
-  geom_smooth(method = "lm") #<<
-```
-
-- Displays `body_mass_g ~ flipper_length_mm` regression line
-
-- Adds 95% confidence intervals by default
-
-- Estimating the __conditional expectation__ of `body_mass_g` | `flipper_length_mm`, 
-
-  - i.e., $\mathbb{E}[Y | X]$
-
-
-]
-.pull-right[
-
-```{r ref.label="line-plot", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## Assessing assumptions of linear regression
-
-Linear regression assumes $Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)$
-
-- If this is true, then $Y_i - \hat{Y}_i \overset{iid}{\sim} N(0, \sigma^2)$
-
 --
 
-Plot residuals against $\hat{Y}_i$, __residuals vs fit__ plot
++ __Shape__: symmetry, skew, kurtosis ("peakedness")
 
-- Used to assess linearity, any divergence from mean 0
-
-- Used to assess equal variance, i.e., if $\sigma^2$ is homogenous across predictions/fits $\hat{Y}_i$
-
---
-
-More difficult to assess the independence and fixed $X$ assumptions
-
-- Make these assumptions based on subject-matter knowledge
-
----
-
-## Residual vs fit plots
-
-.pull-left[
-
-```{r resid-plot, eval = FALSE}
-lin_reg <- 
-  lm(body_mass_g ~ flipper_length_mm, #<<
-     data = penguins)
-
-tibble(fits = fitted(lin_reg), 
-       residuals = residuals(lin_reg)) %>%
-  ggplot(aes(x = fits, y = residuals)) +
-  geom_point(alpha = 0.5) +
-  geom_hline(yintercept = 0, #<<
-             linetype = "dashed", #<<
-             color = "red")
-```
-
-Two things to look for:
-
-1. Any trend around horizontal reference line?
-
-2. Equal vertical spread?
-
-]
-
-.pull-right[
-
-```{r ref.label="resid-plot", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## Residual vs fit plots
-
-.pull-left[
-
-```{r resid-upd-plot, eval = FALSE}
-tibble(fits = fitted(lin_reg), 
-       residuals = residuals(lin_reg)) %>%
-  ggplot(aes(x = fits, y = residuals)) +
-  geom_point(alpha = 0.5) +
-  geom_hline(yintercept = 0, 
-             linetype = "dashed",
-             color = "red") +
-  geom_smooth() #<<
-```
-
-Two things to look for:
-
-1. Any trend around horizontal reference line? 
-
-  - add `geom_smooth` to highlight this
-
-2. Equal vertical spread?
-
-]
-
-.pull-right[
-
-```{r ref.label="resid-upd-plot", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## Local linear regression via LOESS (Local Estimated Scatterplot Smoothing)
-
-Still assume Normality, but not linearity: $Y_i \overset{iid}{\sim} N(f(x), \sigma^2)$, where $f(x)$ is some unknown function
-
---
-
-In __local linear regression__, we estimate $f(X_i)$:
-
-$$\text{arg }\underset{\beta_0, \beta_1}{\text{min}} \sum_i^n w_i(x) \cdot \big(Y_i - \beta_0 - \beta_1 X_i \big)^2$$ 
-
-- Notice the weights depend on $x$, meaning observations close to $x$ given large weight in estimating $f(x)$
-
---
-
-`geom_smooth()` uses tri-cubic weighting:
-
-$$w_i(d_i) = \begin{cases} (1 - |d_i|^3)^3, \text{ if } i \in \text{neighborhood of  } x, \\
-0 \text{ if } i \notin \text{neighborhood of  } x \end{cases}$$
-
-  - where $d_i$ is the distance between $x$ and $X_i$ scaled to be between 0 and 1
+  + Related to higher order moments, i.e., skewness is $\mathbb{E}[X^3]$, kurtosis is $\mathbb{E}[X^4]$
   
-  - control `span`: decides proportion of observations in neighborhood
+--
+
+Compute various statistics with `summary()`, `mean()`, `median()`, `quantile()`, `range()`, `sd()`, `var()`, etc.
+
+---
+
+## Box plots visualize summary statistics
+
+.pull-left[
+
+- We make a __box plot__ with [`geom_boxplot()`](https://ggplot2.tidyverse.org/reference/geom_boxplot.html)
+
+
+```{r boxplot, eval = FALSE}
+penguins %>%
+  ggplot(aes(y = flipper_length_mm)) + #<<
+  geom_boxplot(aes(x = "")) + #<<
+  coord_flip() #<<
+```
+
+- __Pros__:
+  - Displays outliers, percentiles, spread, skew
+  - Useful for side-by-side comparison 
+
+- __Cons__:
+  - Does not display the full distribution shape!
+  - Missing some summary stats potentially
+  - Stresses middle portion
   
----
-
-## Displaying trend lines: LOESS
-
-.pull-left[
-
-```{r loess-plot, eval = FALSE}
-penguins %>%
-  ggplot(aes(x = flipper_length_mm, 
-             y = body_mass_g)) +
-  geom_point(alpha = 0.5) + 
-  geom_smooth() #<<
-```
-
-- LOESS is default behavior with $n \leq 1000$
-
-- Default `span = 0.75`
-
-- For $n > 1000$, `mgcv::gam()` is used with `formula = y ~ s(x, bs = "cs")` and `method = "REML"`
-
+_Why use `aes(x = "")` inside `geom_boxplot()`?_
 
 ]
 .pull-right[
-
-```{r ref.label="loess-plot", echo = FALSE, fig.height=7}
-
+```{r ref.label = 'boxplot', echo = FALSE, fig.height=7}
 ```
-
-
 ]
 
 ---
 
-## Displaying trend lines: LOESS
+## Histograms display 1D continuous distributions
 
 .pull-left[
 
-```{r loess-span-plot, eval = FALSE}
+- We make __histograms__ with [`geom_histogram()`](https://ggplot2.tidyverse.org/reference/geom_histogram.html)
+
+```{r histogram, eval = FALSE}
 penguins %>%
-  ggplot(aes(x = flipper_length_mm, 
-             y = body_mass_g)) +
-  geom_point(alpha = 0.5) + 
-  geom_smooth(span = .1) #<<
+  ggplot(aes(x = flipper_length_mm)) + #<<
+  geom_histogram() #<<
 ```
 
-- LOESS is default behavior with $n \leq 1000$
 
-- Default `span = 0.75`
+$$
+\text{# total obs.} = \sum_{b=1}^B \text{# obs. in bin }b
+$$
 
-- For $n > 1000$, `mgcv::gam()` is used with `formula = y ~ s(x, bs = "cs")` and `method = "REML"`
+- __Pros__:
+  - Displays full shape of distribution
+  - Easy to interpret and see sample size
 
-
+- __Cons__:
+  - Have to choose number of bins and bin locations (will revisit Wednesday)
+  - You can make a bad histogram
+  
 ]
 .pull-right[
-
-```{r ref.label="loess-span-plot", echo = FALSE, fig.height=7}
-
+```{r ref.label = 'histogram', echo = FALSE, fig.height=7}
 ```
-
-
 ]
 
 ---
 
-## Can also update formula within plot
-
-.pull-left[
-
-```{r line-quad-plot, eval = FALSE}
-penguins %>%
-  ggplot(aes(x = flipper_length_mm, 
-             y = body_mass_g)) +
-  geom_point(alpha = 0.5) + 
-  geom_smooth(method = "lm",
-              formula = y ~ x + I(x^2)) #<<
-```
-
-- Fit `body_mass_g ~ flipper_length_mm + flipper_length_mm^2` instead
-
-- _Exercise: check the updated residual plot with this model_ 
-
-
-]
-.pull-right[
-
-```{r ref.label="line-quad-plot", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## What about focusing on the joint distribution?
+# [Do NOT rely on box plots...](https://www.autodesk.com/research/publications/same-stats-different-graphs)
 
 ```{r, echo = FALSE}
-ohtani_pitches <- read_csv("https://raw.githubusercontent.com/ryurko/DataViz-36613-Fall22/main/data/ohtani_pitches_2022.csv")
+knitr::include_graphics("https://damassets.autodesk.net/content/dam/autodesk/research/publications-assets/gifs/same-stats-different-graphs/boxplots.gif")
 ```
+
+Three clearly different distributions of data...
+
+#### But they all result in the exact same box plot!
+
+
+---
+
+# Side-by-side boxplots _can_ be useful for comparing groups
 
 .pull-left[
 
-- Example [dataset of pitches](https://raw.githubusercontent.com/ryurko/DataViz-36613-Fall22/main/data/ohtani_pitches_2022.csv) thrown by baseball superstar [Shohei Ohtani](https://www.baseball-reference.com/players/o/ohtansh01.shtml)
+Map a variable to the boxplot `x` axis:
 
-```{r ohtani-pitches, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_point(alpha = 0.2) +
-  coord_fixed() + #<<
-  theme_bw()
+```{r side-boxplot, eval = FALSE}
+penguins %>%
+  ggplot(aes(y = flipper_length_mm)) + 
+  geom_boxplot(aes(x = species)) #<<
 ```
 
-- Where are the high/low concentrations of X,Y?
+- __Pros__:
+  - Displays conditional distribution summary statistics, outliers, percentiles, spread, skew
 
-- How do we display concentration for 2D data?
+- __Cons__:
+  - Still a boxplot...
+  
+]
+.pull-right[
+```{r ref.label = 'side-boxplot', echo = FALSE, fig.height=7}
+```
+]
 
-- `coord_fixed()` so axes match with unit scales
+
+---
+
+# Side-by-side boxplots _can_ be useful for comparing groups
+
+.pull-left[
+
+Map a variable to the boxplot `fill`:
+
+```{r side-color-boxplot, eval = FALSE}
+penguins %>%
+  ggplot(aes(y = flipper_length_mm)) + 
+  geom_boxplot(aes(x = species,
+                   fill = sex)) #<<
+```
+
+
+- Adds a third dimension to plot, thus conditioning on two categorical variables
+
+  - e.g., `species` and `sex`
+
+]
+.pull-right[
+```{r ref.label = 'side-color-boxplot', echo = FALSE, fig.height=7}
+```
+]
+
+
+---
+
+## Simulate data from mixture of Normal distributions
+
+
+Will sample 100 draws from $N(-1.5, 1)$ and 100 draws from $N(1.5, 1)$
+
+```{r, echo = FALSE}
+tibble(x = c(-5, 5)) %>%
+  ggplot(aes(x)) +
+  geom_function(fun = function(x) dnorm(x, mean = -1.5, sd = 1) + 
+                  dnorm(x, mean = 1.5, sd = 1)) + 
+  labs(x = "Fake variable x") +
+  theme_minimal() +
+  theme(axis.text.y = element_blank(),
+        axis.title.y = element_blank())
+```
+
+---
+
+# Can we naively trust the default?
+
+.pull-left[
+
+```{r hist1, eval = FALSE}
+set.seed(2020)
+fake_data <- 
+  tibble(fake_x = c(rnorm(100, -1.5), 
+                    rnorm(100, 1.5))) %>%
+  mutate(component = 
+           c(rep("left", 100), 
+             rep("right", 100)))
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram() +
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+- Default histogram with 30 bins...
+
 
 ]
 
 .pull-right[
-```{r ref.label="ohtani-pitches", echo = FALSE, fig.height=8}
+
+```{r ref.label = 'hist1', echo = FALSE, fig.height=7}
 ```
 
 ]
 
 ---
 
-## Going from 1D to 2D density estimation
+## What happens as we change the number of bins?
 
-In 1D: estimate density $f(x)$, assuming that $f(x)$ is _smooth_:
 
-$$
-\hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} K_h(x - x_i)
-$$
+.pull-left[
+
+- Decrease it to 15 bins
+
+
+```{r hist2, fig.height = 6}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 15) + #<<
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+
+]
 
 --
 
-In 2D: estimate joint density $f(x_1, x_2)$
+.pull-right[
 
-$$\hat{f}(x_1, x_2) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h_1h_2} K(\frac{x_1 - x_{i1}}{h_1}) K(\frac{x_2 - x_{i2}}{h_2})$$
+- Increase it to 60 bins
+
+```{r hist3, fig.height = 6}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 60) + #<<
+  scale_x_continuous(limits = c(-5, 5))
+```
+]
+
+---
+
+## What happens as we change the number of bins?
+
+
+.pull-left[
+
+- Decrease it to 5 bins
+
+
+```{r hist4, fig.height = 6}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 5) + #<<
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+
+]
 
 --
 
-In 1D there was one bandwidth, now __we have two bandwidths__
-
-  - $h_1$: controls smoothness as $X_1$ changes, holding $X_2$ fixed
-  - $h_2$: controls smoothness as $X_2$ changes, holding $X_1$ fixed
-
-Again Gaussian kernels are the most popular...
-
----
-
-## So how do we display densities for 2D data?
-
-```{r, echo = FALSE, out.width="60%", fig.align='center'}
-knitr::include_graphics("https://www.byclb.com/TR/Tutorials/neural_networks/Ch_4_dosyalar/image044.gif")
-```
-
-
----
-
-## How to read contour plots?
-
-Best known in topology: outlines (contours) denote levels of elevation
-
-```{r, echo = FALSE, out.width="60%", fig.align='center'}
-knitr::include_graphics("https://preview.redd.it/2rbe8s8t7re31.jpg?auto=webp&s=eed849b180dd803d394f556432df026c4cd1dae2")
-```
-
-
----
-
-## Display 2D contour plot
-
-.pull-left[
-
-
-```{r ohtani-pitches-contour, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_point(alpha = 0.2) +
-  geom_density2d() + #<<
-  coord_fixed() +
-  theme_bw()
-```
-
-- Use `geom_density2d` to display contour lines
-
-- Inner lines denote "peaks"
-
-]
-
 .pull-right[
-```{r ref.label="ohtani-pitches-contour", echo = FALSE, fig.height=8}
+
+- Increase it to 100 bins
+
+```{r hist5, fig.height = 6}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 100) + #<<
+  scale_x_continuous(limits = c(-5, 5))
 ```
-
 ]
-
 
 ---
 
-## Display 2D contour plot
+## Variability of graphs - 30 bins
 
 .pull-left[
 
+- First sample with 30 bins...
 
-```{r ohtani-pitches-contour-fill, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  stat_density2d(aes(fill = after_stat(level)), #<<
-                 geom = "polygon") + #<<
-  geom_point(alpha = 0.2) +
-  coord_fixed() +
-  scale_fill_gradient(low = "darkblue", #<<
-                      high = "darkorange") + #<<
-  theme_bw()
+```{r, echo = FALSE, fig.height=7}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram() +
+  scale_x_continuous(limits = c(-5, 5))
 ```
-
-- Use `stat_density2d` for additional features
-
-- May be easier to read than nested lines with color
-
-- __Default color scale is awful!__ Always change it!
 
 
 ]
 
 .pull-right[
-```{r ref.label="ohtani-pitches-contour-fill", echo = FALSE, fig.height=8}
+
+- __What happens with a different sample?__
+
+```{r, echo = FALSE, fig.height=7}
+set.seed(1979)
+fake_data2 <- 
+  tibble(fake_x = c(rnorm(100, -1.5), 
+                    rnorm(100, 1.5))) %>%
+  mutate(component = 
+           c(rep("left", 100), 
+             rep("right", 100)))
+fake_data2 %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram() +
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+]
+
+
+---
+
+## Variability of graphs - 15 bins
+
+.pull-left[
+
+- First sample with 15 bins...
+
+```{r, echo = FALSE, fig.height=7}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 15) +
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+
+]
+
+.pull-right[
+
+- __What happens with a different sample?__
+
+```{r, echo = FALSE, fig.height=7}
+fake_data2 %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 15) +
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+]
+
+
+---
+
+## Variability of graphs - too few bins
+
+.pull-left[
+
+- __High bias__
+
+```{r, echo = FALSE, fig.height=7}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 5) +
+  scale_x_continuous(limits = c(-5, 5))
+```
+
+
+]
+
+
+.pull-right[
+
+- __Low variance__
+
+```{r, echo = FALSE, fig.height=7}
+fake_data2 %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 5) +
+  scale_x_continuous(limits = c(-5, 5))
 ```
 
 ]
 
 ---
 
-## Visualizing grid heat maps
+## Variability of graphs - too many bins
 
 .pull-left[
 
+- __Low bias__
 
-```{r ohtani-pitches-heatmap, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  stat_density2d(aes(fill = after_stat(density)), #<<
-                 geom = "tile", #<<
-                 contour = FALSE) + #<<
-  geom_point(alpha = 0.2) +
-  coord_fixed() +
-  scale_fill_gradient(low = "white", #<<
-                      high = "red") + #<<
-  theme_bw()
+```{r, echo = FALSE, fig.height=7}
+fake_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 100) +
+  scale_x_continuous(limits = c(-5, 5))
 ```
 
-- Divide the space into a grid and color the grid according to high/low values
-
-- Common to treat "white" as empty color
 
 ]
 
 .pull-right[
-```{r ref.label="ohtani-pitches-heatmap", echo = FALSE, fig.height=8}
+
+- __High variance__
+
+```{r, echo = FALSE, fig.height=7}
+fake_data2 %>%
+  ggplot(aes(x = fake_x)) +
+  geom_histogram(bins = 100) +
+  scale_x_continuous(limits = c(-5, 5))
 ```
 
 ]
 
 ---
 
-## Alternative idea: hexagonal binning
+## Back to penguins...
 
 .pull-left[
 
+- We make __histograms__ with [`geom_histogram()`](https://ggplot2.tidyverse.org/reference/geom_histogram.html)
 
-```{r ohtani-pitches-hexbin, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_hex() + #<<
-  coord_fixed() +
-  scale_fill_gradient(low = "darkblue", 
-                      high = "darkorange") + 
+```{r histogram-init, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + #<<
+  geom_histogram() #<<
+```
+
+
+- __Pros__:
+  - Displays full shape of distribution
+  - Easy to interpret and see sample size
+
+- __Cons__:
+  - Have to choose number of bins and bin locations
+  - You can make a bad histogram
+  
+]
+.pull-right[
+```{r ref.label = 'histogram-init', echo = FALSE, fig.height=7}
+```
+]
+
+---
+
+# What about displaying conditional distributions?
+
+.pull-left[
+
+```{r histogram-stack, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(aes(fill = species)) #<<
+```
+
+  - Display conditional distribution of `flipper_length_mm` | `species`, i.e., `x` | `fill`
+  
+  - Default behavior is to __stack__ histograms
+  
+  - __What distribution is easy to see here?__
+  
+  
+]
+.pull-right[
+```{r ref.label = 'histogram-stack', echo = FALSE, fig.height=7}
+```
+]
+
+---
+
+# What about displaying conditional distributions?
+
+.pull-left[
+
+```{r histogram-alpha, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(aes(fill = species),
+                 position = "identity", #<<
+                 alpha = 0.3) #<<
+```
+
+  - Can change to overlay histograms
+  
+  - Modify the `position` to be `identity`
+  
+  - Need to adjust transparency with `alpha`
+  
+  
+]
+.pull-right[
+```{r ref.label = 'histogram-alpha', echo = FALSE, fig.height=7}
+```
+]
+
+---
+
+# Normalize histogram frequencies by displaying density values
+
+.pull-left[
+
+```{r histogram-dens, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(
+    aes(y = after_stat(density), #<<
+        fill = species),
+    position = "identity", 
+    alpha = 0.3) 
+```
+
+- Total area under the bars equals to 1
+
+- Area of any bar:
+  - height $\times$ width $=$ density $\times$ width
+  
+]
+.pull-right[
+```{r ref.label = 'histogram-dens', echo = FALSE, fig.height=7}
+```
+]
+
+
+---
+
+## Use density curves instead for comparison
+
+
+
+```{r density-color, echo = FALSE, fig.align='center'}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density(aes(color = species)) +
   theme_bw()
 ```
-
-- Can specify `binwidth` in both directions
-
-- 2D version of histogram 
-
-- _Need to install `hexbin` package_
-
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches-hexbin", echo = FALSE, fig.height=8}
-```
-
-]
 
 
 ---
 class: center, middle
 
-# Next time: High-Dimensional Data
+# Next time: Density estimation
 
-Reminder: __HW3 due Wednesday!__ 
+Reminder: __HW2 due Wednesday!__ __Graphics Critique #1 due Feb 28th__
 
 Recommended reading: 
 
-[Demo 2 Scatterplots and regression with categorical variables](https://cmu-36613.netlify.app/demos/Demo2.html)
-
-[CW Chapter 12 Visualizing associations among two or more quantitative variables](https://clauswilke.com/dataviz/visualizing-associations.html)
+[CW Chapter 7 Visualizing distributions: Histograms and density plots](https://clauswilke.com/dataviz/histograms-density-plots.html)
 
 

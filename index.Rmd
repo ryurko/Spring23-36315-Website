@@ -28,6 +28,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 3       | Statistical Inference for 1D Categorical Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec3#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec3.Rmd) |
 | 4       | Visualizing 1D Inference and 2D Categorical Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec4#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec4.Rmd) |
 | 5       | Visualizing Inference for 2D Categorical Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec5#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec5.Rmd) |
+| 6       | 1D Quantitative Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec6#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec6.Rmd) |
 
 
 ## R Demos
