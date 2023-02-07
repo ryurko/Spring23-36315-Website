@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "More 2D Quant. and Intro to High Dimensional Data"  
+title: "36-315 Lecture 7"
+subtitle: "Density Estimation"  
 author: 
   - "Professor Ron Yurko"
-date: '9/21/2022'
+date: '2/8/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec7/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,496 +36,424 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
 
-```{r, include = FALSE}
+```{r, include = FALSE, warning = FALSE}
 library(tidyverse)
 library(palmerpenguins)
 ```
 
+## Conceptual Review
 
-## 2D quantitative data
+#### Reminder: HW2 is due tonight! Graphics Critique #1 is due Feb 28th
 
-- We're working with two variables: $(X, Y) \in \mathbb{R}^2$, i.e., dataset with $n$ rows and 2 columns
+__Last class: started discussing 1D quantitative data__
 
-- Goals:
+Two most common/simplest ways to visualize 1D quantitative data:
 
-  - describing the relationships between two variables
+  1. Boxplots: visualizes summary statistics, but massive reduction of data
   
-  - describing the conditional distribution $Y | X$ via regression analysis
-  
-  - __TODAY: describing the joint distribution $X,Y$ via contours, heatmaps, etc.__
+  2. Histograms: flexible way to see shape of data, but need to be careful about binwidth
+    
+__Today: smoothed densities__
 
-- Few big picture ideas to keep in mind:
-
-  - scatterplots are by far the most common visual
+  + Easy to see shape of distribution (similar to histograms)
   
-  - regression analysis is by far the most popular analysis (you have a whole class on this...)
+  + Can plot several smoothed densities to compare groups
   
-  - relationships may vary across other variables, e.g., categorical variables
+  + Compared to histograms/boxplots, gives you a better idea of the kind of theoretical distribution you're working with
   
 ---
 
-## Visuals to focus on the joint distribution
+## Normal Distribution
 
-```{r, echo = FALSE}
-ohtani_pitches <- read_csv("https://raw.githubusercontent.com/ryurko/DataViz-36613-Fall22/main/data/ohtani_pitches_2022.csv")
+```{r, echo = FALSE, fig.align='center', out.width="70%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Normal_Distribution_PDF.svg/440px-Normal_Distribution_PDF.svg.png")
 ```
+
+
+---
+
+## Uniform Distribution
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Uniform_Distribution_PDF_SVG.svg/500px-Uniform_Distribution_PDF_SVG.svg.png")
+```
+
+
+---
+
+## Gamma (also Exponential and Chi-squared) Distribution
+
+```{r, echo = FALSE, fig.align='center',out.width="50%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/e/e6/Gamma_distribution_pdf.svg/650px-Gamma_distribution_pdf.svg.png")
+```
+
+
+---
+
+## Beta Distribution
+
+```{r, echo = FALSE, fig.align='center', out.width="50%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Beta_distribution_pdf.svg/650px-Beta_distribution_pdf.svg.png")
+```
+
+
+---
+
+
+# Normalize histogram frequencies by displaying density values
 
 .pull-left[
 
-- Example [dataset of pitches](https://raw.githubusercontent.com/ryurko/DataViz-36613-Fall22/main/data/ohtani_pitches_2022.csv) thrown by baseball superstar [Shohei Ohtani](https://www.baseball-reference.com/players/o/ohtansh01.shtml)
-
-```{r ohtani-pitches, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_point(alpha = 0.2) +
-  coord_fixed() + #<<
-  theme_bw()
-```
-
-- Where are the high/low concentrations of X,Y?
-
-- How do we display concentration for 2D data?
-
-- `coord_fixed()` so axes match with unit scales
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches", echo = FALSE, fig.height=8}
-```
-
-]
-
----
-
-## Going from 1D to 2D density estimation
-
-In 1D: estimate density $f(x)$, assuming that $f(x)$ is _smooth_:
-
-$$
-\hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} K_h(x - x_i)
-$$
-
---
-
-In 2D: estimate joint density $f(x_1, x_2)$
-
-$$\hat{f}(x_1, x_2) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h_1h_2} K(\frac{x_1 - x_{i1}}{h_1}) K(\frac{x_2 - x_{i2}}{h_2})$$
-
---
-
-In 1D there was one bandwidth, now __we have two bandwidths__
-
-  - $h_1$: controls smoothness as $X_1$ changes, holding $X_2$ fixed
-  - $h_2$: controls smoothness as $X_2$ changes, holding $X_1$ fixed
-
-Again Gaussian kernels are the most popular...
-
----
-
-## So how do we display densities for 2D data?
-
-```{r, echo = FALSE, out.width="60%", fig.align='center'}
-knitr::include_graphics("https://www.byclb.com/TR/Tutorials/neural_networks/Ch_4_dosyalar/image044.gif")
-```
-
-
----
-
-## How to read contour plots?
-
-Best known in topology: outlines (contours) denote levels of elevation
-
-```{r, echo = FALSE, out.width="60%", fig.align='center'}
-knitr::include_graphics("https://preview.redd.it/2rbe8s8t7re31.jpg?auto=webp&s=eed849b180dd803d394f556432df026c4cd1dae2")
-```
-
-
----
-
-## Display 2D contour plot
-
-.pull-left[
-
-
-```{r ohtani-pitches-contour, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_point(alpha = 0.2) +
-  geom_density2d() + #<<
-  coord_fixed() +
-  theme_bw()
-```
-
-- Use `geom_density2d` to display contour lines
-
-- Inner lines denote "peaks"
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches-contour", echo = FALSE, fig.height=8}
-```
-
-]
-
-
----
-
-## Display 2D contour plot
-
-.pull-left[
-
-
-```{r ohtani-pitches-contour-fill, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  stat_density2d(aes(fill = after_stat(level)), #<<
-                 geom = "polygon") + #<<
-  geom_point(alpha = 0.2) +
-  coord_fixed() +
-  scale_fill_gradient(low = "darkblue", #<<
-                      high = "darkorange") + #<<
-  theme_bw()
-```
-
-- Use `stat_density2d` for additional features
-
-- May be easier to read than nested lines with color
-
-- __Default color scale is awful!__ Always change it!
-
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches-contour-fill", echo = FALSE, fig.height=8}
-```
-
-]
-
----
-
-## Visualizing grid heat maps
-
-.pull-left[
-
-
-```{r ohtani-pitches-heatmap, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  stat_density2d(aes(fill = after_stat(density)), #<<
-                 geom = "tile", #<<
-                 contour = FALSE) + #<<
-  geom_point(alpha = 0.2) +
-  coord_fixed() +
-  scale_fill_gradient(low = "white", #<<
-                      high = "red") + #<<
-  theme_bw()
-```
-
-- Divide the space into a grid and color the grid according to high/low values
-
-- Common to treat "white" as empty color
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches-heatmap", echo = FALSE, fig.height=8}
-```
-
-]
-
----
-
-## Alternative idea: hexagonal binning
-
-.pull-left[
-
-
-```{r ohtani-pitches-hexbin, eval = FALSE}
-ohtani_pitches %>%
-  ggplot(aes(x = plate_x, y = plate_z)) +
-  geom_hex() + #<<
-  coord_fixed() +
-  scale_fill_gradient(low = "darkblue", 
-                      high = "darkorange") + 
-  theme_bw()
-```
-
-- Can specify `binwidth` in both directions
-
-- 2D version of histogram 
-
-- _Need to install `hexbin` package_
-
-
-]
-
-.pull-right[
-```{r ref.label="ohtani-pitches-hexbin", echo = FALSE, fig.height=8}
-```
-
-]
-
----
-
-## Back to the penguins...
-
-Pretend I give you this `penguins` dataset and I ask you to make a plot __for every pairwise comparison__...
-
-```{r}
-library(palmerpenguins)
-penguins %>% slice(1:3)
-```
-
---
-
-We can create a __pairs plot__ to see __all__ pairwise relationships __in one plot__
-
-Pairs plot can include the various kinds of pairwise plots we've seen:
-
-- Two quantitative variables: scatterplot
-
-- One categorical, one quantitative: side-by-side violins, stacked
-histograms, overlaid densities
-
-- Two categorical: stacked bars, side-by-side bars, mosaic plots
-
----
-
-## Pairs plots for penguins
-
-.pull-left[
-
-Use the [`GGally`](https://ggobi.github.io/ggally/index.html) package
-
-```{r pairs-plot, eval = FALSE}
-library(GGally)
-penguins %>% 
-  ggpairs(columns = 3:6) #<<
-```
-
-Main arguments to change are:
-
-+ `data`: specifies the dataset
-
-+ `columns`: columns of data you want in the plot (can specify with vector of column names or numbers referring to the column indices)
-
-+ `mapping`: aesthetics using `aes()` - most important is `aes(color = <variable name>)`
-
-Created pairs plot above by specifying `columns` as the four columns of continuous variables (columns 3-6)
-
-
-]
-
-.pull-right[
-```{r ref.label="pairs-plot", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## Pairs plots for penguins
-
-.pull-left[
-
-Annoying aspect: change `alpha` directly with `aes` when using `ggpairs`:
-
-```{r pairs-plot-alpha, eval = FALSE}
-penguins %>% 
-  ggpairs(columns = 3:6,
-          mapping = aes(alpha = 0.5)) #<<
-```
-
-- Diagonal: marginal distributions
-
-- Off-diagonal: joint (pairwise) distributions or statistical summaries (e.g., correlation)
-
-- Matrix of plots is symmetric
-
-]
-
-.pull-right[
-```{r ref.label="pairs-plot-alpha", echo = FALSE, fig.height=7}
-
-```
-
-
-]
-
----
-
-## Read Demo3 for more info on customization!
-
-.pull-left[
-
-```{r, echo = FALSE, fig.height=7}
-penguins %>% 
-  ggpairs(columns = c("bill_length_mm", "body_mass_g", "island"),
-          mapping = aes(alpha = 0.5, color = species), 
-          lower = list(
-            continuous = "smooth_lm", 
-            combo = "facetdensitystrip"
-          ),
-          upper = list(
-            continuous = "cor",
-            combo = "facethist"
-          )
-  )
-```
-
-
-]
-
-.pull-right[
-
-```{r, echo = FALSE, fig.height=7}
+```{r histogram-dens, eval = FALSE}
 penguins %>%
-  dplyr::select(species, body_mass_g, ends_with("_mm")) %>%
-  ggpairs(mapping = aes(color = species, alpha = 0.5),
-          columns = c("flipper_length_mm", "body_mass_g",
-                      "bill_length_mm", "bill_depth_mm")) +
-  scale_colour_manual(values = c("darkorange","purple","cyan4")) +
-  scale_fill_manual(values = c("darkorange","purple","cyan4")) +
-  theme_bw() +
-  theme(strip.text = element_text(size = 7))
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(
+    aes(y = after_stat(density), #<<
+        fill = species),
+    position = "identity", 
+    alpha = 0.3) 
 ```
 
+- Total area under the bars equals to 1
+
+- Area of any bar:
+  - height $\times$ width $=$ density $\times$ width
+  
 ]
+.pull-right[
+```{r ref.label = 'histogram-dens', echo = FALSE, fig.height=7}
+```
+]
+
 
 ---
 
-## What about high-dimensional data?
+## Use density curves instead for comparison
 
-Consider this [dataset]((https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-12-21/readme.md)) containing nutrional information about Starbucks drinks:
 
-```{r, warning = FALSE, message = FALSE}
-starbucks <- 
-  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
-  # Convert columns to numeric that were saved as character
-  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
-starbucks %>% slice(1)
+```{r density-color, echo = FALSE, fig.align='center'}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density(aes(color = species)) +
+  theme_bw()
 ```
 
+---
 
-#### How do we visualize this dataset? 
+## Kernel density estimation
+
+__Goal__: estimate the PDF $f(x)$ for all possible values (assuming it is continuous / smooth)
 
 --
 
-- Tedious task: make a series of pairs plots (one giant pairs plot would overwhelming)
+$$
+\text{Kernel density estimate: } \hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} K_h(x - x_i)
+$$
 
+--
+- $n =$ sample size, $x =$ new point to estimate $f(x)$ (does NOT have to be in dataset!)
+
+
+--
+- $h =$ __bandwidth__, analogous to histogram bin width, ensures $\hat{f}(x)$ integrates to 1
+
+- $x_i =$ $i$th observation in dataset
+
+
+--
+- $K_h(x - x_i)$ is the __Kernel__ function, creates __weight__ given distance of $i$th observation from new point 
+  - as $|x - x_i| \rightarrow \infty$ then $K_h(x - x_i) \rightarrow 0$, i.e. further apart $i$th row is from $x$, smaller the weight
+  
+  - as __bandwidth__ $h \uparrow$ weights are more evenly spread out (as $h \downarrow$ more concentrated around $x$) 
+
+  - typically use [__Gaussian__ / Normal](https://en.wikipedia.org/wiki/Normal_distribution) kernel: $\propto e^{-(x - x_i)^2 / 2h^2}$
+  
+  - $K_h(x - x_i)$ is large when $x_i$ is close to $x$
+  
 
 ---
 
-## What about high-dimensional data?
+## [Wikipedia example](https://en.wikipedia.org/wiki/Kernel_density_estimation)
 
-
-```{r, warning = FALSE, message = FALSE}
-starbucks <- 
-  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
-  # Convert columns to numeric that were saved as character
-  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
-starbucks %>% slice(1)
-```
-
-#### Goals to keep in mind with visualizing high-dimensional data
-
-- __Visualize structure among observations__ using distances matrices, projections (Monday's lecture)
-
-- __Visualize structure among variables__ using correlation as "distance"
-
-
+.center[![](https://upload.wikimedia.org/wikipedia/commons/thumb/4/41/Comparison_of_1D_histogram_and_KDE.png/1000px-Comparison_of_1D_histogram_and_KDE.png)]
+  
 ---
 
-## Correlogram to visualize correlation matrix
+## We display __kernel density estimates__ with [`geom_density()`](https://ggplot2.tidyverse.org/reference/geom_density.html)
 
 .pull-left[
 
-Use the [`ggcorrplot`](https://rpkgs.datanovia.com/ggcorrplot/) package
-
-```{r cor-plot, eval = FALSE}
-starbucks_quant_cor <- 
-  cor(dplyr::select(starbucks, #<<
-                    serv_size_m_l:caffeine_mg))
-
-library(ggcorrplot)
-ggcorrplot(starbucks_quant_cor, #<<
-           method = "circle",
-           hc.order = TRUE,
-           type = "lower")
+```{r curve, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density() + #<<
+  theme_bw()
 ```
 
-- Compute the correlation matrix (using quantitative variables)
+- __Pros__:
+  - Displays full shape of distribution
+  - Can easily layer
+  - Add categorical variable with color
 
-- Can rearrange using `hc.order = TRUE` based on clustering (next week!)
+- __Cons__:
+  - Need to pick bandwidth and kernel...
+  
+]
+.pull-right[
+```{r ref.label = 'curve', echo = FALSE, fig.height=7}
+```
+]
 
-- See Demo3 for more examples...
+---
+
+## Choice of [kernel?](https://en.wikipedia.org/wiki/Kernel_(statistics)
+
+```{r, echo = FALSE, out.width="70%", fig.align='center'}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/4/47/Kernels.svg/1000px-Kernels.svg.png")
+```
+
+
+---
+
+## What about the bandwidth? 
+
+Use __Gaussian reference rule__ (_rule-of-thumb_) $\approx 1.06 \cdot \sigma \cdot n^{-1/5}$, where $\sigma$ is the observed standard deviation
+
+Modify the bandwidth using the `adjust` argument - __value to multiply default bandwidth by__
+
+.pull-left[
+```{r curve-noisy, fig.height=4}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density(adjust = 0.5) + #<<
+  theme_bw()
+```
+
+  
+]
+.pull-right[
+```{r curve-smooth, fig.height=4}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density(adjust = 2) + #<<
+  theme_bw()
+```
+]
+
+---
+
+## CAUTION: dealing with bounded data...
+
+.pull-left[
+
+```{r bound-dens, eval=FALSE}
+set.seed(101)
+bound_data <- tibble(fake_x = runif(100))
+bound_data %>%
+  ggplot(aes(x = fake_x)) +
+  geom_density() +
+  geom_rug(alpha = 0.5) + #<<
+  stat_function(data = 
+                  tibble(fake_x = c(0, 1)),
+                fun = dunif, color = "red") +
+  scale_x_continuous(limits = c(-.5, 1.5))
+```
+
+- Use `geom_rug()` to display raw data points
+
+- __Observe density estimates for impossible values!__
+
+- Proposed solutions based on [reflecting](https://github.com/tidyverse/ggplot2/issues/3387)
+
+- Check out [`evmix` package for more information](https://www.jstatsoft.org/article/view/v084i05)
 
 ]
 
 .pull-right[
 
-```{r ref.label="cor-plot", echo = FALSE, fig.height=7}
-
+```{r ref.label = 'bound-dens', echo = FALSE, fig.height=7}
 ```
-
 
 ]
 
 ---
 
-## Parallel coordinates plot with [`ggparcoord`](https://ggobi.github.io/ggally/reference/ggparcoord.html)
+## Alternative density-based option: violin plots
 
 .pull-left[
 
-- Display each variable side-by-side on standardized axis
-
-- Connect observations with lines
-
-```{r par-coord, eval = FALSE}
-starbucks %>%
-  ggparcoord(columns = 5:15, #<<
-             alphaLines = .1) + #<<
-  theme(axis.text.x = 
-          element_text(angle = 90))
+```{r violins, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, 
+             y = flipper_length_mm)) +
+  geom_violin() + #<<
+  coord_flip()
 ```
 
-- Can change `scale` method for y-axis
+- __Pros__:
+  - Displays full shape of distribution
+  
+  - Can easily layer...
+  
+- __Cons__:
 
-- Useful for moderate number of observations and variables
-
-- __How do we order the x-axis?__
-
-- __Does this agree with the correlogram?__
+  - Inherits same problems as density curves
+  
+  - Mirror image is duplicate information...
 
 ]
 .pull-right[
 
-```{r ref.label="par-coord", echo = FALSE, fig.height=7}
-
+```{r ref.label = 'violins', echo = FALSE, fig.height=7}
 ```
 
 ]
+
+---
+
+## Alternative density-based option: violin plots
+
+.pull-left[
+
+```{r violins2, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = species, 
+             y = flipper_length_mm)) +
+  geom_violin() + 
+  geom_boxplot(width = .2) + #<<
+  coord_flip()
+```
+
+- __Pros__:
+
+  - Displays full shape of distribution
+  
+  - __Can easily layer with box plots on top__
+  
+- __Cons__:
+
+  - Inherits same problems as density curves
+  
+  - Mirror image is duplicate information...
+
+]
+.pull-right[
+
+```{r ref.label = 'violins2', echo = FALSE, fig.height=7}
+```
+
+]
+
+---
+
+## Alternative density-based option: ridge plots
+
+.pull-left[
+
+- Available with [`ggridges` package](https://cran.r-project.org/web/packages/ggridges/vignettes/introduction.html)
+
+```{r ridges, eval = FALSE}
+library(ggridges)
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = species)) + #<<
+  geom_density_ridges(rel_min_height = 0.01) #<<
+```
+
+- __Pros__:
+
+  - Drops the mirror image of violins
+  
+  - Useful for many categorical levels (especially ordinal data)
+  
+- __Cons__:
+
+  - Inherits same problems as density curves
+  
+  - Be careful with overlap...
+
+]
+.pull-right[
+
+```{r ref.label = 'ridges', echo = FALSE, fig.height=7}
+```
+
+]
+
+---
+
+
+## Alternative data-based option: beeswarm plots
+
+.pull-left[
+
+- Available with [`ggbeeswarm` package](https://github.com/eclarke/ggbeeswarm)
+
+
+```{r beeswarm, eval = FALSE}
+library(ggbeeswarm)
+penguins %>%
+  ggplot(aes(x = species, 
+             y = flipper_length_mm)) +
+  geom_beeswarm(cex = 1.5) + #<<
+  coord_flip()
+```
+
+- __Pros__:
+
+  - Displays full shape of distribution
+  
+  - Displays each data point individually
+  
+- __Cons__:
+
+  - Which algorithm for arranging points?
+  
+  - __What's another major disadvantage?__
+
+]
+.pull-right[
+
+```{r ref.label = 'beeswarm', echo = FALSE, fig.height=7}
+```
+
+]
+
+---
+
+## Main Takeaways
+
+- Smoothed densities are a flexible tool for visualizing 1D distribution
+
+- When nonparametrically estimating the density, there are two choices:
+
+  1. Bandwidth: Determines _smoothness_ of distribution, usually data-driven choice
+  
+  2. Kernel: Determines how much _influence_ each observation should have on each other during estimation, usually context driven
+  
+- Alternatively, you can plot the data directly
+
+- Next time: 
+
+  - Parametric density estimates
+  
+  - ECDFs and Kolmogorov-Smirnov (KS) test
 
 ---
 class: center, middle
 
-# Next time: More High-Dimensional Data
+# Next time: Graphical Inference for 1D Quantitative Data
 
-Reminder: __HW3 due tonight!__ 
+Reminder: __HW2 due tonight!__ __Graphics critique/replication due Friday!__
 
 Recommended reading: 
 
-[CW Chapter 12 Visualizing associations among two or more quantitative variables](https://clauswilke.com/dataviz/visualizing-associations.html)
+[CW Chapter 7 Visualizing distributions: Histograms and density plots](https://clauswilke.com/dataviz/histograms-density-plots.html)
 
 
