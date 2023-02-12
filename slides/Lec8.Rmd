@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "High Dimensional Data"  
+title: "36-315 Lecture 8"
+subtitle: "Graphical Inference for 1D Quantitative Data"  
 author: 
   - "Professor Ron Yurko"
-date: '9/26/2022'
+date: '2/13/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec8/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,660 +36,551 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
 
-```{r, include = FALSE}
+```{r, include = FALSE, warning = FALSE}
 library(tidyverse)
-starbucks <- 
-  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
-  # Convert columns to numeric that were saved as character
-  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
+library(palmerpenguins)
 ```
 
 
-# Conceptual review
+## Conceptual Review
 
-Last class: contour plots, heat maps, and diving into high-dimensional data
+#### Reminder: HW3 is due Wednesday! Graphics Critique #1 is due Feb 28th
 
-#### Today: how do we visualize structure of high-dimensional data?
+  - And remember to check your grades on Gradescope!
 
-- Example: What if I give you a dataset with 50 variables, and ask you to make __one visualization__ that best represents the data? _What do you do?_
+__Last class: non-parametric density curves__
 
---
+Smoothed densities are a nice way to see the shape of a distribution
 
-- Do NOT panic and make $\binom{50}{2} = 1225$ pairs of plots!
+There are two ways to produce smoothed densities:
 
-- __Intuition__: Take high-dimensional data and __represent it in 2-3 dimensions__, then visualize those dimensions
-
----
-
-## Thinking about distance...
-
-When describing visuals, we've implicitly "clustered" observations together
-
-- e.g., where are the mode(s) in the data?
-
---
-
-These types of task require characterizing the __distance__ between observations
-
-- Clusters: groups of observations that are "close" together
-
---
-
-This is easy to do for 2 quantitative variables: just make a scatterplot (possibly with contours or heatmap)
-
-#### But how do we define "distance" for high-dimensional data?
-
---
-
-Let $\boldsymbol{x}_i = (x_{i1}, \dots, x_{ip})$ be a vector of $p$ features for observation $i$
-
-Question of interest: How "far away" is $\boldsymbol{x}_i$ from $\boldsymbol{x}_j$?
-
---
-
-When looking at a scatterplot, you're using __Euclidean distance__ (length of the line in $p$-dimensional space):
-
-$$d(\boldsymbol{x}_i, \boldsymbol{x}_j) = \sqrt{(x_{i1} - x_{j1})^2 + \dots + (x_{ip} - x_{jp})^2}$$
-
----
-
-## Distances in general
-
-There's a variety of different types of distance metrics: [Manhattan](https://en.wikipedia.org/wiki/Taxicab_geometry), [Mahalanobis](https://en.wikipedia.org/wiki/Mahalanobis_distance), [Cosine](https://en.wikipedia.org/wiki/Cosine_similarity), [Kullback-Leiber Divergence](https://en.wikipedia.org/wiki/Kullback%E2%80%93Leibler_divergence), [Wasserstein](https://en.wikipedia.org/wiki/Wasserstein_metric), but we're just going to focus on [Euclidean distance](https://en.wikipedia.org/wiki/Euclidean_distance)
-
---
-
-$d(\boldsymbol{x}_i, \boldsymbol{x}_j)$ measures pairwise distance between two observations $i,j$ and has the following properties:
-
-1. __Identity__: $\boldsymbol{x}_i = \boldsymbol{x}_j \iff d(\boldsymbol{x}_i, \boldsymbol{x}_j) = 0$
-
-2. __Non-Negativity__: $d(\boldsymbol{x}_i, \boldsymbol{x}_j) \geq 0$
-
-3. __Symmetry__: $d(\boldsymbol{x}_i, \boldsymbol{x}_j) = d(\boldsymbol{x}_j, \boldsymbol{x}_i)$
-
-4. __Triange Inequality__: $d(\boldsymbol{x}_i, \boldsymbol{x}_j) \leq d(\boldsymbol{x}_i, \boldsymbol{x}_k) + d(\boldsymbol{x}_k, \boldsymbol{x}_j)$
-
---
-
-.pull-left[
-
-__Distance Matrix__: matrix $D$ of all pairwise distances
-
-- $D_{ij} = d(\boldsymbol{x}_i, \boldsymbol{x}_j)$
-
-- where $D_{ii} = 0$ and $D_{ij} = D_{ji}$
-
-]
-.pull-right[
-
-$$D = \begin{pmatrix}
-                0 & D_{12} & \cdots & D_{1n} \\
-                D_{21} & 0 & \cdots & D_{2n} \\
-                \vdots & \vdots & \ddots & \vdots \\
-                D_{n1} & \cdots & \cdots & 0
-            \end{pmatrix}$$
-
-]
-
----
-
-## Multi-dimensional scaling (MDS)
-
-#### General approach for visualizing distance matrices
-
-- Puts $n$ observations in a $k$-dimensional space such that the distances are preserved as much as possible
-
-  - where $k << p$ typically choose $k = 2$
+  1. __Parametric__: Specify a distribution (e.g., Normal), estimate the parameters, and fit the corresponding PDF
   
---
+  2. __Nonparametric__: Pick a bandwidth and kernel, then fit a  kernel-smoothed density
+    
+__Today: smoothed densities__
 
-MDS attempts to create new point $\boldsymbol{y}_i = (y_{i1}, y_{i2})$ for each unit such that:
-
-$$\sqrt{(y_{i1} - y_{j1})^2 + (y_{i2} - y_{j2})^2} \approx D_{ij}$$
-
-- i.e., distance in 2D MDS world is approximately equal to the actual distance
-
---
-
-#### Then plot the new $\boldsymbol{y}$s on a scatterplot
-
-- Use the `scale()` function to ensure variables are comparable
-
-- Make a distance matrix for this dataset
-
-- Visualize it with MDS
+  - Parametric density estimates
+  
+  - ECDFs and Kolmogorov-Smirnov (KS) test
+  
 
 ---
 
-## MDS example with Starbucks drinks
-
-.pull-left[
-
-```{r starbucks-mds, eval = FALSE}
-starbucks_scaled_quant_data <- starbucks %>%
-  dplyr::select(serv_size_m_l:caffeine_mg) %>%
-  scale(center = FALSE, 
-        scale = apply(., 2, sd, na.rm = TRUE)) #<<
-
-dist_euc <- dist(starbucks_scaled_quant_data) #<<
-
-starbucks_mds <- cmdscale(d = dist_euc, k = 2) #<<
-
-starbucks <- starbucks %>%
-  mutate(mds1 = starbucks_mds[,1],
-         mds2 = starbucks_mds[,2])
-
-starbucks %>%
-  ggplot(aes(x = mds1, y = mds2)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "Coordinate 1", y = "Coordinate 2")
-```
-
-]
-
-.pull-right[
-
-```{r ref.label="starbucks-mds", fig.height=7, echo = FALSE}
-
-```
-
-]
-
----
-
-# View structure with additional variables
-
-.pull-left[
-
-```{r, fig.height=7, echo = FALSE}
-starbucks %>%
-  ggplot(aes(x = mds1, y = mds2, color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "Coordinate 1", y = "Coordinate 2") +
-  theme(legend.position = "bottom")
-```
-
-]
-
-.pull-right[
-
-```{r, fig.height=7, echo = FALSE}
-starbucks %>%
-  ggplot(aes(x = mds1, y = mds2, color = sugar_g)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "Coordinate 1", y = "Coordinate 2") +
-  scale_color_gradient(low = "darkblue", high = "darkorange") +
-  theme(legend.position = "bottom")
-```
-
-]
-
----
-
-## Dimension reduction - searching for variance
-
-__GOAL__: Focus on reducing dimensionality of feature space, i.e., number of columns, while __retaining__ most of the information, i.e., __variance__, in a lower dimensional space
-
-- $n \times p$ matrix $\rightarrow$ dimension reduction technique $\rightarrow$ $n \times k$ matrix
-
---
-
-Special case we just discussed: __MDS__
-
-- $n \times n$ __distance__ matrix $\rightarrow$ MDS $\rightarrow$ $n \times k$ matrix (usually $k = 2$)
-
---
-
-- This requires converting data into a distance matrix - summarizing all differences between observations into a single number, effectively "double reduction"
-
-1. Reduce data to a distance matrix
-
-2. Reduce distance matrix to $k = 2$ dimensions
-
-#### How can we apply dimension to the original data?
-
----
-
-## Principal Component Analysis (PCA)
-
-$$
-\begin{pmatrix}
-& & \text{really} & & \\
-& & \text{wide} & & \\
-& & \text{matrix} & &
-\end{pmatrix}
-\rightarrow \text{matrix algebra stuff} \rightarrow 
-\begin{pmatrix}
-\text{much}  \\
-\text{thinner}  \\
-\text{matrix} 
-\end{pmatrix}
-$$
-
-- Start with $n \times p$ matrix of __correlated__ variables $\rightarrow$ $n \times k$ matrix of __uncorrelated__ variables
-
---
-
-- Each of the $k$ columns in the right-hand matrix are __principal components__, all uncorrelated with each other
-
-- First column accounts for most variation in the data, second column for second-most variation, and so on
-
-#### Intuition: first few principal components account for most of the variation in the data
-
----
-
-## What are principal components?
-
-- Assume $\boldsymbol{X}$ is a $n \times p$ matrix that is __centered__ and __stardardized__
-
-- _Total variation_ $= p$, since Var( $\boldsymbol{x}_j$ ) = 1 for all $j = 1, \dots, p$
-
-- PCA will give us $p$ principal components that are $n$-length columns - call these $Z_1, \dots, Z_p$
-
---
-
-__First principal component__ (aka PC1):
-
-$$Z_1 = \phi_{11} X_1 + \phi_{21} X_2 + \dots + \phi_{p1} X_p$$
-
-
---
-
-  - $\phi_{j1}$ are the weights indicating the contributions of each variable $j \in 1, \dots, p$
-  
-  - Weights are normalized $\sum_{j=1}^p \phi_{j1}^2 = 1$
-  
-  - $\phi_{1} = (\phi_{11}, \phi_{21}, \dots, \phi_{p1})$ is the __loading vector__ for PC1
-
---
-  
-  - $Z_1$ is a linear combination of the $p$ variables that has the __largest variance__
-
----
-
-## What are principal components?
-
-__Second principal component__:
-
-$$Z_2 = \phi_{12} X_1 + \phi_{22} X_2 + \dots + \phi_{p2} X_p$$
-
-  - $\phi_{j2}$ are the weights indicating the contributions of each variable $j \in 1, \dots, p$
-  
-  - Weights are normalized $\sum_{j=1}^p \phi_{j1}^2 = 1$
-  
-  - $\phi_{2} = (\phi_{12}, \phi_{22}, \dots, \phi_{p2})$ is the __loading vector__ for PC2
-  
-  - $Z_2$ is a linear combination of the $p$ variables that has the __largest variance__
-  
-    - __Subject to constraint it is uncorrelated with $Z_1$__ 
-
---
-
-We repeat this process to create $p$ principal components
-
-- __Uncorrelated__: Each ($Z_j, Z_{j'}$) is uncorrelated with each other
-
-- __Ordered Variance__: Var( $Z_1$ ) $>$ Var( $Z_2$ ) $> \dots >$ Var( $Z_p$ )
-
-- __Total Variance__: $\sum_{j=1}^p \text{Var}(Z_j) = p$
-
-
-#### Intuition: pick some $k << p$ such that if $\sum_{j=1}^k \text{Var}(Z_j) \approx p$, then just using $Z_1, \dots, Z_k$
-
----
-
-## [Visualizing PCA](https://www.stevejburr.com/post/scatter-plots-and-best-fit-lines/) in two dimensions
-
-```{r out.width="100%", echo = FALSE, fig.align='center'}
-# Ensure reproducibility by setting random number seed
-set.seed(123) 
-plot_data <- tibble("x" = rnorm(50, mean = 100, sd = 20)) %>%
-  mutate(y =  0.8 * x + rnorm(50, mean = 0, sd = 10))
-basic_scatter <- ggplot(plot_data) +
-  geom_point(aes(x, y), color = "black")+
-  coord_equal() +
+## Non-parametric density curves
+
+
+```{r density, echo = FALSE, fig.align='center'}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_histogram(aes(y = after_stat(density)),
+                 fill = "darkblue", alpha = 0.5,
+                 bins = 15,
+                 color = "black") +
+  geom_density(color = "blue", size = 2) +
   theme_bw()
-basic_scatter
 ```
+
 
 ---
 
-## [Visualizing PCA](https://www.stevejburr.com/post/scatter-plots-and-best-fit-lines/) in two dimensions
+## Kernel density estimation
 
-```{r out.width="100%", echo = FALSE, fig.align='center'}
-#fit the model
-line1 <- lm(y ~ x, plot_data)$coef
-#extract the slope from the fitted model
-line1.slope <- line1[2]
-#extract the intercept from the fitted model
-line1.intercept <- line1[1]
-basic_scatter_yfit <- basic_scatter +
-  geom_abline(aes(slope = line1.slope, intercept = line1.intercept),
-              colour = "darkred") +
-  annotate("text", x = 75, y = 120, label = "y ~ x", color = "darkred",
-           size = 9)
-basic_scatter_yfit
-```
+__Goal__: estimate the PDF $f(x)$ for all possible values (assuming it is continuous / smooth)
 
----
+$$
+\text{Kernel density estimate: } \hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} K_h(x - x_i)
+$$
 
-## [Visualizing PCA](https://www.stevejburr.com/post/scatter-plots-and-best-fit-lines/) in two dimensions
+- $n =$ sample size, $x =$ new point to estimate $f(x)$ (does NOT have to be in dataset!)
 
-```{r out.width="100%", echo = FALSE, fig.align='center'}
-#fit the model
-line2 <- lm(x ~ y, plot_data)$coef
-#extract the slope from the fitted model
-line2.slope <- 1 / line2[2]
-#extract the intercept from the fitted model
-line2.intercept <- -(line2[1] / line2[2])
-basic_scatter_xyfit <- basic_scatter_yfit +
-  geom_abline(aes(slope = line2.slope, intercept = line2.intercept),
-              colour = "blue") +
-  annotate("text", x = 125, y = 55, label = "x ~ y", color = "blue",
-           size = 9)
-basic_scatter_xyfit
-```
+
+- $h =$ __bandwidth__, analogous to histogram bin width, ensures $\hat{f}(x)$ integrates to 1
+
+- $x_i =$ $i$th observation in dataset
+
+
+- $K_h(x - x_i)$ is the __Kernel__ function, creates __weight__ given distance of $i$th observation from new point 
+  - as $|x - x_i| \rightarrow \infty$ then $K_h(x - x_i) \rightarrow 0$, i.e. further apart $i$th row is from $x$, smaller the weight
+  
+  - as __bandwidth__ $h \uparrow$ weights are more evenly spread out (as $h \downarrow$ more concentrated around $x$) 
+
+  - typically use [__Gaussian__ / Normal](https://en.wikipedia.org/wiki/Normal_distribution) kernel: $\propto e^{-(x - x_i)^2 / 2h^2}$
+  
+  - $K_h(x - x_i)$ is large when $x_i$ is close to $x$
 
 ---
 
-## [Visualizing PCA](https://www.stevejburr.com/post/scatter-plots-and-best-fit-lines/) in two dimensions
+### What do visualizations of continuous distributions display?
 
-```{r out.width="100%", echo = FALSE, fig.align='center'}
-pca <- prcomp(cbind(plot_data$x, plot_data$y))$rotation
-pca.slope <- pca[2,1] / pca[1,1]
-pca.intercept <- mean(plot_data$y) - (pca.slope * mean(plot_data$x))
+__Probability that continuous variable $X$ takes a particular value is 0__ 
 
-basic_scatter_xy_pca_fit <- basic_scatter_xyfit +
-  geom_abline(aes(slope = pca.slope, intercept = pca.intercept),
-              colour = "darkorange") +
-  annotate("text", x = 75, y = 90, label = "PCA", color = "darkorange",
-           size = 9)
-basic_scatter_xy_pca_fit
-```
+e.g., $P$ (`flipper_length_mm` $= 200$) $= 0$, _why_?
 
----
 
-## [Visualizing PCA](https://www.stevejburr.com/post/scatter-plots-and-best-fit-lines/) in two dimensions
+Instead we use the __probability density function (PDF)__ to provide a __relative likelihood__ 
 
-```{r out.width="100%", echo = FALSE, fig.align='center'}
-plot_data %>%
-  #calculate the positions using the line equations:
-  mutate(yhat_line1=(x*line1.slope+line1.intercept),
-         xhat_line1=x,
-         yhat_line2=y,
-         xhat_line2=(y-line2.intercept)/line2.slope,
-         #https://en.wikipedia.org/wiki/Distance_from_a_point_to_a_line
-         a=pca.slope,
-         b=-1,
-         c=pca.intercept,
-         xhat_line3=(b*(b*x-a*y)-(a*c))/((a*a)+(b*b)),
-         yhat_line3=(a*(-b*x+a*y)-(b*c))/((a*a)+(b*b)),
-         #add the slopes/intercepts to this data frame:
-         slope_line1=line1.slope,
-         slope_line2=line2.slope,
-         slope_line3=pca.slope,
-         intercept_line1=line1.intercept,
-         intercept_line2=line2.intercept,
-         intercept_line3=pca.intercept
-         )%>% 
-  #drop intermediate variables
-  select(-c(a,b,c)) %>%
-  pivot_longer(yhat_line1:intercept_line3, names_to = "key", values_to = "value") %>%
-  #transpose to a long form
-  #gather(key="key",value="value",-c(x,y)) %>% 
-  # have "yhat_line1", want two colums of "yhat" "line1"
-  separate(key,c("type", "line"), "_") %>% 
-  #then transpose to be fatter, so we have cols for xhat, yhat etc
-  pivot_wider(names_from = "type", values_from = "value") %>%
-  #spread(key="type",value="value") %>%
-  #relable the lines with more description names, and order the factor for plotting:
-  mutate(line=case_when(
-           line=="line1" ~ "y ~ x",
-           line=="line2" ~ "x ~ y",
-           TRUE ~ "PCA"
-         ),
-         line = fct_relevel(line, "y ~ x", "x ~ y", "PCA")) %>% 
-  ggplot() +
-  geom_point(aes(x = x, y = y, color = line)) +
-  geom_abline(aes(slope = slope, intercept = intercept, color = line)) +
-  geom_segment(aes(x = x, y = y, xend = xhat, yend = yhat, color = line)) +
-  facet_wrap(~ line, ncol = 3) +
-  scale_color_manual(values = c("darkred", "blue", "darkorange")) +
-  theme_bw() +
-  theme(strip.background = element_blank(),
-        legend.position = "none",
-        strip.text = element_text(size = 16))
-```
+- Density estimation was the focus last Wednesday's lecture 
+
+
+--
+For continuous variables we can use the __cumulative distribution function (CDF)__,
+
+$$
+F(x) = P(X \leq x)
+$$
+
+--
+For $n$ observations we can easily compute the __Empirical CDF (ECDF)__:
+
+
+$$\hat{F}_n(x)  = \frac{\text{# obs. with variable} \leq x}{n} = \frac{1}{n} \sum_{i=1}^{n}1(x_i \leq x)$$
+
+
+- where $1()$ is the indicator function, i.e. `ifelse(x_i <= x, 1, 0)`
 
 ---
 
-## So what do we do with the principal components?
+## Display full distribution with ECDF plot
 
-__The point__: given a dataset with $p$ variables, we can find $k$ variables $(k << p)$ that account for most of the variation in the data
+.pull-left[
+
+- We make __ECDF plots__ with [`stat_ecdf()`](https://ggplot2.tidyverse.org/reference/stat_ecdf.html)
+
+```{r ecdf, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  stat_ecdf() + #<<
+  theme_bw()
+```
+
+- __Pros__:
+  - Displays all of your data at once (except the order)
+  - Does NOT require any parameters to adjust
+  - As $n \rightarrow \infty$, our ECDF $\hat{F}_n(x)$ converges to the true CDF $F(x)$
+
+- __Cons__:
+  - _What do you think the cons are?_
+  
+]
+.pull-right[
+```{r ref.label = 'ecdf', echo = FALSE, fig.height=7}
+```
+]
+
+---
+
+## What's the relationship between these two figures?
+
+.pull-left[
+
+```{r ref.label = 'density', echo = FALSE, fig.height=7}
+```
+  
+]
+
+.pull-right[
+
+```{r ref.label = 'ecdf', echo = FALSE, fig.height=7}
+```
+]
+
+
+---
+
+## What about comparing to theoretical distributions?
+
+.pull-left[
+
+```{r, echo = FALSE}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/74/Normal_Distribution_PDF.svg/2560px-Normal_Distribution_PDF.svg.png")
+```
+
+
+]
 
 --
 
-Note that the principal components are NOT easy to interpret - these are combinations of all variables
+.pull-right[
 
-PCA is similar to MDS with these main differences:
-
-1. MDS reduces a _distance_ matrix while PCA reduces a _data_ matrix
-
-2. PCA has a principled way to choose $k$
-
-3. Can visualize how the principal components are related to variables in data
-
----
-
-## Working with PCA on Starbucks drinks
-
-Use the `prcomp()` function (based on SVD) for PCA on __centered__ and __scaled__ data
-
-```{r}
-starbucks_pca <- prcomp(dplyr::select(starbucks, serv_size_m_l:caffeine_mg), #<<
-                        center = TRUE, scale. = TRUE) #<<
-summary(starbucks_pca)
+```{r, echo = FALSE}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/c/ca/Normal_Distribution_CDF.svg/2560px-Normal_Distribution_CDF.svg.png")
 ```
 
+]
+
 ---
 
-## Computing Principal Components
+## One-Sample Kolmogorov-Smirnov Test
 
-Extract the matrix of principal components $\boldsymbol{Z} = XV$ (dimension of $\boldsymbol{Z}$ will match original data)
+- We compare the ECDF $\hat{F}(x)$ to a theoretical distribution's CDF $F(x)$
 
-```{r}
-starbucks_pc_matrix <- starbucks_pca$x
-head(starbucks_pc_matrix)
+--
+
+- The one sample KS test statistic is: $\text{max}_x |\hat{F}(x) - F(x)|$
+
+```{r, echo = FALSE, out.width="45%", fig.align='center'}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/c/cf/KS_Example.png")
 ```
 
-Columns are uncorrelated, such that Var( $Z_1$ ) $>$ Var( $Z_2$ ) $> \dots >$ Var( $Z_p$ ) - can start with a scatterplot of $Z_1, Z_2$
 
 ---
 
-## Starbucks drinks: PC1 and PC2
+## Parametric Density Estimation
+
++ Instead of trying to estimate whole $f(x)$, assume a particular $f(x)$ and estimate its parameters
+
++ For example, assume $X_i \sim N(\mu, \sigma^2)$. Then estimate the parameters:
+
+$$
+\hat{\mu} = \bar{x}, \hspace{0.1in} \hat{\sigma}^2 = \frac{\sum_{i=1}^n (x_i - \bar{x})^2}{n-1}
+$$
+
++ Then our density estimate is:
+
+$$
+\hat{f}(x) = \frac{1}{\sqrt{2\pi} \hat{\sigma}} \exp \left( - \frac{(x - \hat{\mu})^2}{2\hat{\sigma}^2} \right)
+$$
+
+---
+
+## Flipper length example
+
+What if we assume `flipper_length_mm` follows Normal distribution? i.e., `flipper_length_mm` $\sim N(\mu, \sigma^2)$
+
+--
 
 .pull-left[
-```{r pca-plot, eval = FALSE}
-starbucks <- starbucks %>%
-  mutate(pc1 = starbucks_pc_matrix[,1], 
-         pc2 = starbucks_pc_matrix[,2])
-starbucks %>%
-  ggplot(aes(x = pc1, y = pc2)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "PC 1", y = "PC 2")
+
++ Need estimates for mean $\mu$ and standard deviation $\sigma$:
+
+
+```{r density-normal, eval = FALSE, fig.align='center'}
+fl_mean <- mean(penguins$flipper_length_mm, #<<
+                na.rm = TRUE) #<<
+fl_sd <- sd(penguins$flipper_length_mm, #<<
+            na.rm = TRUE) #<<
+
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) + 
+  geom_density(color = "blue") +
+  stat_function( #<<
+    fun = dnorm, #<<
+    args = list(mean = fl_mean, #<<
+                sd = fl_sd), #<<
+    linetype = "dashed", color = "black") + #<<
+  theme_bw()
 ```
-
-- __Look familiar?__
-
-- Principal components are not interpretable, but we can add a __biplot__ with arrows showing the linear relationship between one variable and other variables
 
 ]
 
 .pull-right[
-```{r ref.label="pca-plot", echo = FALSE, fig.height=7}
+
+```{r ref.label = 'density-normal', echo = FALSE, fig.height=6}
 ```
 
 ]
 
 ---
 
-## Making PCs interpretable with biplots ([`factoextra`](http://www.sthda.com/english/wiki/factoextra-r-package-easy-multivariate-data-analyses-and-elegant-visualization))
+## Flipper length example
 
-.pull-left[
+What if we assume `flipper_length_mm` follows Normal distribution? i.e., `flipper_length_mm` $\sim N(\mu, \sigma^2)$
 
++ Need estimates for mean $\mu$ and standard deviation $\sigma$:
 
-```{r pca-biplot, eval = FALSE}
-library(factoextra)
-# Designate to only label the variables:
-fviz_pca_biplot( #<<
-  starbucks_pca, label = "var", #<<
-  # Change the alpha for observations 
-  # which is represented by ind
-  alpha.ind = .25,
-  # Modify the alpha for variables (var):
-  alpha.var = .75,
-  col.var = "darkblue")
+```{r}
+fl_mean <- mean(penguins$flipper_length_mm, na.rm = TRUE)
+fl_sd <- sd(penguins$flipper_length_mm, na.rm = TRUE)
 ```
 
-- Arrow direction: "as the variable increases..."
+--
 
-- Arrow angles: correlation
+Perform one-sample KS test using [`ks.test()`](https://stat.ethz.ch/R-manual/R-devel/library/stats/html/ks.test.html):
 
-  - 90 degrees means uncorrelated
-  - $< 90$ means positively correlated
-  - $> 90$ means negatively correlated
+```{r}
+ks.test(x = penguins$flipper_length_mm, y = "pnorm",
+        mean = fl_mean, sd = fl_sd)
+```
+
+
+---
+
+## Flipper length example
+
+```{r ks-test-viz, echo = FALSE, eval = FALSE}
+# First create the ECDF function for the variable:
+fl_ecdf <- ecdf(penguins$flipper_length_mm)
+# Compute the absolute value of the differences between the ECDF for the values
+# and the theoretical values with assumed Normal distribution:
+abs_ecdf_diffs <- abs(fl_ecdf(penguins$flipper_length_mm) - pnorm(penguins$flipper_length_mm, mean = fl_mean, sd = fl_sd))
+# Now find where the maximum difference is:
+max_abs_ecdf_diff_i <- which.max(abs_ecdf_diffs)
+# Get this flipper length value:
+max_fl_diff_value <- penguins$flipper_length_mm[max_abs_ecdf_diff_i]
+# Plot the ECDF with the theoretical Normal and KS test info:
+penguins %>%
+  ggplot(aes(x = flipper_length_mm)) +
+  stat_ecdf(color = "darkblue") +
+  # Use stat_function to draw the Normal ECDF
+  stat_function(fun = pnorm, args = list(mean = fl_mean, sd = fl_sd), color = "black", linetype = "dashed") +
+  # Draw KS test line:
+  geom_vline(xintercept = max_fl_diff_value, color = "red") +
+  # Add text with the test results (x and y are manually entered locations)
+  annotate(geom = "text", x = 215, y = .25, label = "KS test stat = 0.12428\np-value = 5.163e-05") + 
+  labs(x = "Flipper length (mm)", y = "Fn(x)") + theme_bw()
+```
+
+
+```{r ref.label = 'ks-test-viz', echo = FALSE, fig.height=4}
+```
+
+---
+
+## Statistical Tests for Comparing Distributions
+
++ We've focused on assessing if a single quantitative variable follows a particular distribution
+
+  + Logic of one-sample KS test: Compare empirical distribution to theoretical distribution
   
-- Arrow length: strength of relationship with PCs
+--
+
+
+#### How do we compare multiple empirical distributions?
+
++ Very common scenario: Determine if a quantitative variable depends on a categorical variable, examples:
+  
+  + Clinical trials with multiple treatments
+  
+  + Assessing differences across race, gender, socioeconomic status
+  
+  + Industrial experiments, A/B testing
+  
+  + _Comparing song duration across different genres?_
+    
+- Can use overlayed densities, side-by-side violin plots, facetted histograms
+
+- Remember: plotting conditional distributions... but when are differences in a graphic _statistically significant_?
+
+
+---
+
+## [TidyTuesday](https://github.com/rfordatascience/tidytuesday) [Spotify Songs](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/readme.md) - Duration by Genre
+
+```{r, echo = FALSE, fig.align='center'}
+# Read in the data
+spotify_songs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+
+# Create density plot
+spotify_songs %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  geom_density() +
+  # Use the ggthemes package for the colorblind legend
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Duration (ms)", color = "Genre") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+```
+
+
+---
+
+## [TidyTuesday](https://github.com/rfordatascience/tidytuesday) [Spotify Songs](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/readme.md) - Duration by Genre
+
+```{r, echo = FALSE, fig.align='center'}
+# Create ECDF plot
+spotify_songs %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  stat_ecdf() +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Duration (ms)", color = "Genre",
+       y = "Fn(x)") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
+```
+
+
+---
+
+## Test the difference between the rap and rock duration?
+
+```{r, echo = FALSE, fig.align='center'}
+# Create ECDF plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "rock")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  stat_ecdf() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#F0E442", "#0072B2")) +
+  labs(x = "Duration (ms)", color = "Genre",
+       y = "Fn(x)") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
+```
+
+
+---
+
+## Kolmogorov-Smirnov Test... Again
+
+KS test can also be used to compare two empirical distributions $\hat{F}_A(x)$ and $\hat{F}_B$, via test statistic for __two samples__:
+
+$$
+\text{max}_x |\hat{F}_A(x) - \hat{F}_B(x)|
+$$
+
+
+```{r, warnings = FALSE}
+spotify_songs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+rap_duration <- spotify_songs %>% filter(playlist_genre == "rap") %>% pull(duration_ms)
+rock_duration <- spotify_songs %>% filter(playlist_genre == "rock") %>% pull(duration_ms)
+
+ks.test(rap_duration, y = rock_duration)
+```
+
+
+
+---
+
+
+## Kolmogorov-Smirnov Test... Again
+
+KS test can also be used to compare two empirical distributions $\hat{F}_A(x)$ and $\hat{F}_B$, via test statistic for __two samples__:
+
+$$
+\text{max}_x |\hat{F}_A(x) - \hat{F}_B(x)|
+$$
+
+
+.pull-left[
+
+#### Advantages
 
 ]
+
 .pull-right[
-```{r ref.label = "pca-biplot", echo = FALSE, fig.height=8}
 
-```
+#### Disadvantages
+
 
 ]
 
 ---
 
-## How many principal components to use?
+## Statistical Tests for Comparing Distributions
 
-#### Intuition: Additional principal components will add smaller and smaller variance
+Infinite number of ways that you can compare multiple quantitative distributions, three common ways are:
 
-- Keep adding components until the added variance _drops off_
+1. __Any difference at all?__ Two sample KS test
+  
+--
 
-```{r}
-summary(starbucks_pca)
-```
+2. __Difference in means?__
+
+  - Null hypothesis: $H_0: \mu_1 = \mu_2 = \cdots = \mu_K$ (use `t.test` or `oneway.test()` functions)
+  
+  - Can assume the variances are all the same or differ
+  
+  - If reject, can only conclude __not all means are equal__
+  
+3. __Difference in variances?__
+
+  - Null hypothesis: $H_0: \sigma^2_1 = \sigma^2_2 = \cdots = \sigma^2_K$ (use `bartlett.test()` function)
+  
+  - If reject, can only conclude __not all variances are equal__
+  
+Unlike the KS test, __difference in means and variances are sensitive to non-Normality__
+
+  + Different distributions can yield insignificant results
+
 
 ---
 
-## Create scree plot (aka "elbow plot") to choose
+## Test the difference between the rap and rock duration?
 
-```{r scree-plot, eval = TRUE, fig.align='center', out.width="80%"}
-fviz_eig(starbucks_pca, addlabels = TRUE) + #<<
-  geom_hline(yintercept = 100 * (1 / ncol(starbucks_pca$x)), linetype = "dashed", color = "darkred")
+```{r, echo = FALSE, fig.align='center'}
+# Create ECDF plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "rock")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  stat_ecdf() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#F0E442", "#0072B2")) +
+  labs(x = "Duration (ms)", color = "Genre",
+       y = "Fn(x)") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
 ```
 
-- Number of dimensions on x-axis, proportion of variance on y-axis
-
-- _Rule of thumb_: horizontal line at $1/p$ (__Why?__)
 
 ---
 
-## Nonlinear dimension reduction, e.g., t-SNE
+## Test the difference between the rap and rock duration?
 
-
-```{r tsne-plot, echo = FALSE, fig.align='center'}
-library(Rtsne)
-set.seed(2013)
-tsne_drinks <- Rtsne::Rtsne(starbucks_scaled_quant_data, dims = 2,
-                            check_duplicates = FALSE)
-
-starbucks %>%
-  mutate(tsne1 = tsne_drinks$Y[,1], 
-         tsne2 = tsne_drinks$Y[,2]) %>%
-  ggplot(aes(x = tsne1, y = tsne2, color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-
+```{r, echo = FALSE, fig.align='center'}
+# Create density plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "rock")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  geom_density() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#F0E442", "#0072B2")) +
+  labs(x = "Duration (ms)", color = "Genre") +
+  theme_bw() +
+  theme(legend.position = "bottom")
 ```
 
+
+---
+
+## What about the difference between the pop and rap?
+
+```{r, echo = FALSE, fig.align='center'}
+# Create density plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "pop")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  geom_density() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#56B4E9", "#F0E442")) +
+  labs(x = "Duration (ms)", color = "Genre") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
 
 ---
 class: center, middle
 
-# Next time: More High-Dimensional Data and Shiny
+# Next time: Comparing Distributions and Statistical Power
 
-Reminder: __HW4 due Wednesday!__ 
+Reminder: __HW3 due Wednesday!__ __Graphics critique due Feb 28th!__
 
 Recommended reading: 
 
-[CW Chapter 12 Visualizing associations among two or more quantitative variables](https://clauswilke.com/dataviz/visualizing-associations.html)
+[CW Chapter 8 Visualizing distributions: Empirical cumulative distribution functions and q-q plots](https://clauswilke.com/dataviz/ecdf-qq.html)
 
 
 ---
 
+## BONUS: Visualizing the KS test statistic
 
-## PCA: [__singular value decomposition (SVD)__](https://en.wikipedia.org/wiki/Singular_value_decomposition)
-
-$$
-X = U D V^T
-$$
-
-- Matrices $U$ and $V$ contain the left and right (respectively) __singular vectors of scaled matrix $X$__
-
-- $D$ is the diagonal matrix of the __singular values__
-
---
-
-- SVD simplifies matrix-vector multiplication as __rotate, scale, and rotate again__
-
-
---
-$V$ is called the __loading matrix__ for $X$ with $\phi_{j}$ as columns, 
-
-  - $Z = X  V$ is the PC matrix
-
---
-
-BONUS __eigenvalue decomposition__ (aka spectral decomposition)
-
-- $V$ are the __eigenvectors__ of $X^TX$ (covariance matrix, $^T$ means _transpose_)
-
-- $U$ are the __eigenvectors__ of $XX^T$
-
-- The singular values (diagonal of $D$) are square roots of the __eigenvalues__ of $X^TX$ or $XX^T$
-
-- Meaning that $Z = UD$
-
----
-
-## Eigenvalues guide dimension reduction
-
-We want to choose $p^* < p$ such that we are explaining variation in the data
-
---
-
-Eigenvalues $\lambda_j$ for $j \in 1, \dots, p$ indicate __the variance explained by each component__
-
-  - $\sum_j^p \lambda_j = p$, meaning $\lambda_j \geq 1$ indicates $\text{PC}j$ contains at least one variable's worth in variability
-  
-  - $\lambda_j / p$ equals proportion of variance explained by $\text{PC}j$
-  
-  - Arranged in descending order so that $\lambda_1$ is largest eigenvalue and corresponds to PC1
-  
---
-  
-  - Can compute the cumulative proportion of variance explained (CVE) with $p^*$ components:
-  
-$$\text{CVE}_{p^*} = \frac{\sum_j^{p*} \lambda_j}{p}$$
-
-Can use [__scree plot__](https://en.wikipedia.org/wiki/Scree_plot) to plot eigenvalues and guide choice for $p^* <p$ by looking for "elbow" (rapid to slow change)
-
+```{r ref.label = 'ks-test-viz', echo = TRUE, eval = FALSE}
+```
 
