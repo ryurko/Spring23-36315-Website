@@ -1,14 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>36-613: Data Visualization</title>
+    <title>36-315 Lecture 9</title>
     <meta charset="utf-8" />
     <meta name="author" content="Professor Ron Yurko" />
     <script src="libs/header-attrs/header-attrs.js"></script>
-    <script src="libs/fabric/fabric.min.js"></script>
-    <link href="libs/xaringanExtra-scribble/scribble.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-scribble/scribble.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() { window.xeScribble = new Scribble({"pen_color":["#FF0000"],"pen_size":3,"eraser_size":30,"palette":[]}) })</script>
     <script src="libs/clipboard/clipboard.min.js"></script>
     <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
     <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
@@ -20,16 +16,16 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# 36-613: Data Visualization
+# 36-315 Lecture 9
 ]
 .subtitle[
-## More High Dimensional Data and Shiny
+## Comparing Distributions and Statistical Power
 ]
 .author[
 ### Professor Ron Yurko
 ]
 .date[
-### 9/28/2022
+### 2/15/2023
 ]
 
 ---
@@ -43,246 +39,349 @@ class: center, middle, inverse, title-slide
 
 
 
-## Consider the following spiral structure...
+## Conceptual Review
 
+#### Reminder: HW3 is due tonight! Graphics Critique #1 is due Feb 28th
+
+__Last class: introduction to KS tests for comparing distributions__
+
+Several ways to graphically compare several distributions:
+
+  + Facetted histograms, side-by-side violin plots, overlayed densities, ECDFs
+  
+Graphics are extremely useful because human eyes can quickly compare and contrast distributions...
+
+#### But when are the differences we're seeing statistically significant?
+
+  + _Any_ distributional difference? `\(\rightarrow\)` KS test
+  
+  + Just care about mean differences? `\(\rightarrow\)` t-test
+  
+  + Just care about variance differences? `\(\rightarrow\)` Bartlett's test
+  
+__Today: Understanding the statistical power of tests and graphics__
+
+
+---
+
+## Recap: One-Sample KS Test
+
++ Have a single sample `\(\mathbf{X} = (X_1,\dots,X_n)\)`
+
++ Want to test: Does `\(\mathbf{X}\)` follow a particular distribution?
+
++ Compares the empirical CDF of `\(\mathbf{X}\)` to the theoretical CDF of a particular distribution:
+
+`$$\underbrace{F(x) = P(X \leq x)}_{\text{theoretical CDF}}, \hspace{0.2in} \underbrace{\hat{F}(x) = \frac{1}{n} \sum_{i=1}^n \mathbb{I}(X_i \leq x)}_{\text{empirical CDF}}$$`
+
++ Null hypothesis: `\(\mathbf{X}\)` follows a distribution with CDF `\(F(x)\)`
+
++ Alternative hypothesis: `\(\mathbf{X}\)` does not follow this distribution
+
++ Test statistic: `\(\max_x |\hat{F}(x) - F(x)|\)`
+
++ If `\(\hat{F}(x)\)` is far away from `\(F(x)\)` `\(\rightarrow\)` __reject null__
+
+
+---
+
+## Recap: Two-Sample KS Test
+
++ Have two samples `\(\mathbf{X} = (X_1,\dots,X_m)\)`, `\(\mathbf{Y} = (Y_1,\dots,Y_n)\)`
+
++ Want to test: Do `\(\mathbf{X}\)` and `\(\mathbf{Y}\)` follow the same distribution?
+
++ Compares the empirical CDFs of `\(\mathbf{X}\)` and `\(\mathbf{Y}\)`:
+
+`$$\underbrace{\hat{F}_X(z) = \frac{1}{m} \sum_{i=1}^m \mathbb{I}(X_i \leq z)}_{\text{empirical CDF of } \mathbf{X}} \hspace{0.2in} \underbrace{\hat{F}_Y(z) = \frac{1}{n} \sum_{i=1}^n \mathbb{I}(Y_i \leq z)}_{\text{empirical CDF of } \mathbf{Y}}$$`
+
++ Null hypothesis: `\(\mathbf{X}\)` and `\(\mathbf{Y}\)` follow the same distribution.
+
++ Alternative hypothesis: `\(\mathbf{X}\)` and `\(\mathbf{Y}\)` do not follow the same distribution
+
++ Test statistic: `\(\max_z |\hat{F}_X(z) - \hat{F}_Y(z)|\)`
+
++ If `\(\hat{F}_X\)` and `\(\hat{F}_Y\)` are far away from each other `\(\rightarrow\)` __reject null__
+
+
+---
+
+## [TidyTuesday](https://github.com/rfordatascience/tidytuesday) [Spotify Songs](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/readme.md) - Duration by Genre
 
 &lt;img src="figs/Lec9/unnamed-chunk-2-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 
 ---
 
-## PCA simply rotates the data...
+## What about the difference between the pop and rap?
 
-&lt;img src="figs/Lec9/unnamed-chunk-3-1.png" width="100%" /&gt;
+&lt;img src="figs/Lec9/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 
 ---
 
-## Nonlinear dimension reduction with t-SNE and UMAP
+## What about the difference between the pop and rap?
 
-.pull-left[
 &lt;img src="figs/Lec9/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
-]
-.pull-right[
-&lt;img src="figs/Lec9/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-]
-
-Both t-SNE and UMAP look at the local distances between points in the original `\(p\)`-dimensional space and try to reproduce them in a lower `\(k\)`-dimensional space
 
 ---
 
-### [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding): t-distributed stochastic neighbor embedding
+## Observe significant difference given large dataset size...
 
-- Construct conditional probability for similarity between observations in original space
 
-  - i.e., probability `\(x_i\)` will pick `\(x_j\)` as its neighbor 
+```r
+spotify_songs &lt;- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+table(spotify_songs$playlist_genre)
+```
 
-`$$p_{j \mid i}=\frac{\exp \left(-\left\|x_i-x_j\right\|^2 / 2 \sigma_i^2\right)}{\sum_{k \neq i} \exp \left(-\left\|x_i-x_k\right\|^2 / 2 \sigma_i^2\right
-)},\quad p_{i j}=\frac{\left(p_{j \mid i}+p_{i \mid j}\right)}{2 n}$$`
+```
+## 
+##   edm latin   pop   r&amp;b   rap  rock 
+##  6043  5155  5507  5431  5746  4951
+```
 
-- `\(\sigma_i\)` is the variance of Gaussian centered at `\(x_i\)` controlled by __perplexity__:  `\(\log (\text { perplexity })=-\sum_j p_{j \mid i} \log _2 p_{j \mid i}\)`
+```r
+rap_duration &lt;- spotify_songs %&gt;% filter(playlist_genre == "rap") %&gt;% pull(duration_ms)
+pop_duration &lt;- spotify_songs %&gt;% filter(playlist_genre == "pop") %&gt;% pull(duration_ms)
 
-  -  loosely interpreted as the number of close neighbors to consider for each point
+ks.test(rap_duration, y = pop_duration)
+```
+
+```
+## 
+## 	Asymptotic two-sample Kolmogorov-Smirnov test
+## 
+## data:  rap_duration and pop_duration
+## D = 0.14569, p-value &lt; 2.2e-16
+## alternative hypothesis: two-sided
+```
+
+
+---
+
+## What happens if we had a smaller sample?
+
+
+```r
+set.seed(2017)
+sample_songs &lt;- spotify_songs %&gt;%
+  group_by(playlist_genre) %&gt;% 
+  slice_sample(n = 100)
+
+table(sample_songs$playlist_genre)
+```
+
+```
+## 
+##   edm latin   pop   r&amp;b   rap  rock 
+##   100   100   100   100   100   100
+```
+
+```r
+sample_rap_duration &lt;- sample_songs %&gt;% filter(playlist_genre == "rap") %&gt;% pull(duration_ms)
+sample_pop_duration &lt;- sample_songs %&gt;% filter(playlist_genre == "pop") %&gt;% pull(duration_ms)
+
+ks.test(sample_rap_duration, y = sample_pop_duration)
+```
+
+```
+## 
+## 	Asymptotic two-sample Kolmogorov-Smirnov test
+## 
+## data:  sample_rap_duration and sample_pop_duration
+## D = 0.16, p-value = 0.1545
+## alternative hypothesis: two-sided
+```
+
+
+---
+
+
+## But it still looks different???
+
+&lt;img src="figs/Lec9/unnamed-chunk-7-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Test difference between means and variances?
+
+Can test difference in means using `t.test()`:
+
+
+```r
+t.test(sample_rap_duration, sample_pop_duration)
+```
+
+```
+## 
+## 	Welch Two Sample t-test
+## 
+## data:  sample_rap_duration and sample_pop_duration
+## t = 0.83091, df = 172.78, p-value = 0.4072
+## alternative hypothesis: true difference in means is not equal to 0
+## 95 percent confidence interval:
+##  -8766.158 21512.638
+## sample estimates:
+## mean of x mean of y 
+##  221645.7  215272.5
+```
+
+
+---
+
+## Test difference between means and variances?
+
+Can test difference in variances using `bartlett.test()`:
+
+
+```r
+bartlett.test(list(sample_rap_duration, sample_pop_duration))
+```
+
+```
+## 
+## 	Bartlett test of homogeneity of variances
+## 
+## data:  list(sample_rap_duration, sample_pop_duration)
+## Bartlett's K-squared = 15.54, df = 1, p-value = 8.08e-05
+```
+
+
+#### Rejects at `\(\alpha = 0.05\)` even with this smaller sample size!
+
++ Why did the KS test say they weren't different when the graph were clearly different? Two possible reasons:
+
+  + The sample size might be too small to detect a difference
+  
+  + The KS test is known to have low power
+
+---
+
+## Statistical power
+  
+  
++ __Statistical power__ is key to really understanding graphics - you need to know when you're looking at real effects versus noise
+
++ Here are two definitions of power (one in English, one in math):
+
+  + English: The probability that we reject the null hypothesis when the null hypothesis is false.
+  
+  + Math: `\(P(\text{p-value} \leq \alpha | H_0\)` is false)
   
 --
 
-- Find points `\(y_i\)` in lower dimensional space with symmetrized student t-distribution
++ Main things that affect statistical power:
 
-`$$q_{j \mid i}=\frac{\left(1+\left\|y_i-y_j\right\|^2\right)^{-1}}{\sum_{k \neq i}\left(1+\left\|y_i-y_k\right\|^2\right)^{-1}}, \quad q_{i j}=\frac{q_{i \mid j}+q_{j \mid i}}{2 n}$$`
-- Match conditional probabilities by minimize sum of KL divergences `\(C=\sum_{i j} p_{i j} \log \left(\frac{p_{i j}}{q_{i j}}\right)\)`
-
----
-
-## Starbucks t-SNE plot
-
-.pull-left[
-
-Use [`Rtsne`](https://github.com/jkrijthe/Rtsne) package 
-
-
-```r
-set.seed(2013)
-tsne_fit &lt;- starbucks %&gt;%
-  dplyr::select(serv_size_m_l:caffeine_mg) %&gt;%
-  scale() %&gt;%
-* Rtsne(check_duplicates = FALSE)
-
-starbucks %&gt;%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %&gt;%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) + 
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-```
-
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec9/unnamed-chunk-6-1.png" width="100%" /&gt;
-
-
-]
-
-
----
-
-## Starbucks t-SNE plot - involves randomness!
-
-.pull-left[
-
-__Depends on the random starting point!__
-
-
-```r
-*set.seed(2014)
-tsne_fit &lt;- starbucks %&gt;%
-  dplyr::select(serv_size_m_l:caffeine_mg) %&gt;%
-  scale() %&gt;%
-* Rtsne(check_duplicates = FALSE)
-
-starbucks %&gt;%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %&gt;%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-```
-
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec9/unnamed-chunk-7-1.png" width="100%" /&gt;
-
-
-]
-
----
-
-## Starbucks t-SNE plot - watch the perplexity!
-
-.pull-left[
-
-
-
-```r
-*set.seed(2013)
-tsne_fit &lt;- starbucks %&gt;%
-  dplyr::select(serv_size_m_l:caffeine_mg) %&gt;%
-  scale() %&gt;%
-* Rtsne(perplexity = 100,
-        check_duplicates = FALSE)
-
-starbucks %&gt;%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %&gt;%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-```
-
-- Increases with more data
-
-- Should not be bigger than `\(\frac{n-1}{3}\)`
-
-]
-
-.pull-right[
-
-&lt;img src="figs/Lec9/unnamed-chunk-8-1.png" width="100%" /&gt;
-
-
-]
-
----
-
-## Back to the spirals: results depend on perplexity!
-
-
-&lt;img src="figs/Lec9/unnamed-chunk-9-1.png" width="100%" /&gt;
-
-
----
-
-## Criticisms of t-SNE plots
-
-.pull-left[
-
-- __Poor scalability__: does not scale well for large data, can practically
-only embed into 2 or 3 dimensions
-
-- __Meaningless global structure__: distance between clusters might not
-have clear interpretation and cluster size doesn’t have any meaning to
-it
-
-- __Poor performance with very high dimensional data__: need PCA as
-pre-dimension reduction step
-
-- [__Sometime random noise can lead to false positive structure in the
-t-SNE projection__](https://distill.pub/2016/misread-tsne/)
-
-- __Can NOT interpret like PCA!__
-
-]
-
-.pull-right[
-&lt;img src="figs/Lec9/unnamed-chunk-10-1.png" width="100%" /&gt;
-]
-
----
-
-## Interactive web apps with [`Shiny`](https://shiny.rstudio.com/)
-
-Shiny is a framework to __interactive__ web applications and dynamic dashboards in `R`
-
-__You do NOT need to be a web developer to create Shiny apps__, you just need to learn some additional syntax to augment your `R` code 
-
---
-
-Every Shiny app consists of two scripts (could also be saved into one file `app.R` but that's annoying)
-
-1. `ui.R`: controls __user interface__, sets up the display, __widgets__ for user `input`
-
-  - contains more code specific to Shiny
-
-2. `server.R`: code to generate / display the results! Communicates with `ui.R` with __reactive objects__: processes user `input` to return `output`
-
-  - will contain more _traditional_ `R` code: load packages, data wrangling, create plots
+  + Bigger differences in the data `\(\rightarrow\)` more power
   
+  + Smaller variance/error in differences `\(\rightarrow\)` more power
+  
+  + Bigger sample size `\(\rightarrow\)` more power
+  
+  + More appropriate statistical test `\(\rightarrow\)` more power
+
+Also remember: Type 1 error is falsely rejecting; Type 2 error is falsely failing to reject
+
+
+---
+
+## Toy example for understanding statistical power
+
+Consider two samples:
+
+`$$(X_1,\dots,X_n) \sim N(0, 1) \\
+(Y_1,\dots,Y_n) \sim N(\delta, 1)$$`
+
+Let's say we use `t.test(x, y)`
+
+We'll simulate `\(\mathbf{X}\)` and `\(\mathbf{Y}\)` 1000 times for some `\(n\)` and `\(\delta &gt; 0\)`
+
 --
 
-Can be run locally or deployed on a Shiny app server for public viewing
+We'll count the number of times we reject
+
+`$$\text{Power} = P(\text{p-value} \leq \alpha | H_0 \text{ false}) \\
+            = P(\text{p-value} \leq \alpha | \delta &gt; 0) \\
+            \approx \frac{\text{# times reject}}{1000}$$`
+            
+We'll consider `\(n = 10, 20, \dots, 1000\)` and `\(\delta = 0.1\)` or `\(\delta = 0.25\)`
+
+
+---
+
+## Toy example: power of `\(t\)`-test
+
+
+
+
+&lt;img src="figs/Lec9/unnamed-chunk-11-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Another toy example 
+
+Consider two samples:
+
+`$$(X_1,\dots,X_n) \sim N(0, 1) \\
+(Y_1,\dots,Y_n) \sim N(0, 1.5)$$`
+
+Let's consider three ways to test differences:
+
+1. `t.test(x, y)`
+
+2. `bartlett.test(list(x, y))`
+
+3. `ks.test(x,y)`
+
+We'll simulate `\(\mathbf{X}\)` and `\(\mathbf{Y}\)` 1000 times for samples sizes `\(n = 10, 20, \dots, 1000\)`
+
+__What do you think the power curves will look like for these methods?__
+
+---
+
+## Comparison of power for the different tests
+
+
+
+
+&lt;img src="figs/Lec9/unnamed-chunk-13-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+# Main takeaways
+
+Graphics are a great way to see if there are differences in distributions, however... 
+
++ Graphics should be paired with statistical analyses to determine if what
+you see is a _true effect_ versus noise
+
++ __Even if there is a true effect, you may have limited power to detect it__
+
++ Some effects are easier to detect than others
+  
+__Remember: Power is the probability you reject when the null is false__
+
+Things that increase statistical power:
+
++ Increase sample size
+
++ Reduce variance/error
+
++ Increase differences / effects
+
++ Choose appropriate tests!
 
 
 ---
 class: center, middle
 
-# DO IT LIVE
+# Next time: 2D Quantitative Data: Scatterplots and Linear Regression
 
-
----
-class: center, middle
-
-# Next time: Maps
-
-__HW4 due today! HW5 due next Wednesday and Graphics Critique / Replication #2 due Friday Oct 7th!__ 
-
-Recommended reading: 
-
-[How to Use t-SNE Effectively](https://distill.pub/2016/misread-tsne/)
-
-[Understanding UMAP](https://pair-code.github.io/understanding-umap/)
-
-[Shiny tutorials](https://shiny.rstudio.com/tutorial/)
-
-[Shiny Gallery](https://shiny.rstudio.com/gallery/)
+Reminder: __HW3 due tonight!__  __Graphics critique due Feb 28th!__
 
 
 

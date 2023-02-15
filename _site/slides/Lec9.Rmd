@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "More High Dimensional Data and Shiny"  
+title: "36-315 Lecture 9"
+subtitle: "Comparing Distributions and Statistical Power"  
 author: 
   - "Professor Ron Yurko"
-date: '9/28/2022'
+date: '2/15/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec9/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,56 +36,328 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
 
-```{r, include = FALSE}
+```{r, include = FALSE, warning = FALSE}
 library(tidyverse)
-starbucks <- 
-  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
-  # Convert columns to numeric that were saved as character
-  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
-spiral_data <- 
-  read_csv("https://raw.githubusercontent.com/ryurko/DataViz-36613-Fall22/main/data/spirals.csv")
+spotify_songs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
 ```
 
 
-## Consider the following spiral structure...
+## Conceptual Review
+
+#### Reminder: HW3 is due tonight! Graphics Critique #1 is due Feb 28th
+
+__Last class: introduction to KS tests for comparing distributions__
+
+Several ways to graphically compare several distributions:
+
+  + Facetted histograms, side-by-side violin plots, overlayed densities, ECDFs
+  
+Graphics are extremely useful because human eyes can quickly compare and contrast distributions...
+
+#### But when are the differences we're seeing statistically significant?
+
+  + _Any_ distributional difference? $\rightarrow$ KS test
+  
+  + Just care about mean differences? $\rightarrow$ t-test
+  
+  + Just care about variance differences? $\rightarrow$ Bartlett's test
+  
+__Today: Understanding the statistical power of tests and graphics__
+
+
+---
+
+## Recap: One-Sample KS Test
+
++ Have a single sample $\mathbf{X} = (X_1,\dots,X_n)$
+
++ Want to test: Does $\mathbf{X}$ follow a particular distribution?
+
++ Compares the empirical CDF of $\mathbf{X}$ to the theoretical CDF of a particular distribution:
+
+$$\underbrace{F(x) = P(X \leq x)}_{\text{theoretical CDF}}, \hspace{0.2in} \underbrace{\hat{F}(x) = \frac{1}{n} \sum_{i=1}^n \mathbb{I}(X_i \leq x)}_{\text{empirical CDF}}$$
+
++ Null hypothesis: $\mathbf{X}$ follows a distribution with CDF $F(x)$
+
++ Alternative hypothesis: $\mathbf{X}$ does not follow this distribution
+
++ Test statistic: $\max_x |\hat{F}(x) - F(x)|$
+
++ If $\hat{F}(x)$ is far away from $F(x)$ $\rightarrow$ __reject null__
+
+
+---
+
+## Recap: Two-Sample KS Test
+
++ Have two samples $\mathbf{X} = (X_1,\dots,X_m)$, $\mathbf{Y} = (Y_1,\dots,Y_n)$
+
++ Want to test: Do $\mathbf{X}$ and $\mathbf{Y}$ follow the same distribution?
+
++ Compares the empirical CDFs of $\mathbf{X}$ and $\mathbf{Y}$:
+
+$$\underbrace{\hat{F}_X(z) = \frac{1}{m} \sum_{i=1}^m \mathbb{I}(X_i \leq z)}_{\text{empirical CDF of } \mathbf{X}} \hspace{0.2in} \underbrace{\hat{F}_Y(z) = \frac{1}{n} \sum_{i=1}^n \mathbb{I}(Y_i \leq z)}_{\text{empirical CDF of } \mathbf{Y}}$$
+
++ Null hypothesis: $\mathbf{X}$ and $\mathbf{Y}$ follow the same distribution.
+
++ Alternative hypothesis: $\mathbf{X}$ and $\mathbf{Y}$ do not follow the same distribution
+
++ Test statistic: $\max_z |\hat{F}_X(z) - \hat{F}_Y(z)|$
+
++ If $\hat{F}_X$ and $\hat{F}_Y$ are far away from each other $\rightarrow$ __reject null__
+
+
+---
+
+## [TidyTuesday](https://github.com/rfordatascience/tidytuesday) [Spotify Songs](https://github.com/rfordatascience/tidytuesday/blob/master/data/2020/2020-01-21/readme.md) - Duration by Genre
+
+```{r, echo = FALSE, fig.align='center'}
+spotify_songs %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  geom_density() +
+  ggthemes::scale_color_colorblind() +
+  labs(x = "Duration (ms)", color = "Genre") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+
+
+```
+
+
+---
+
+## What about the difference between the pop and rap?
+
+```{r, echo = FALSE, fig.align='center'}
+# Create density plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "pop")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  geom_density() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#56B4E9", "#F0E442")) +
+  labs(x = "Duration (ms)", color = "Genre") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+---
+
+## What about the difference between the pop and rap?
+
+```{r, echo = FALSE, fig.align='center'}
+# Create ECDF plot for just rap and rock
+spotify_songs %>%
+  filter(playlist_genre %in% c("rap", "pop")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  stat_ecdf() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#56B4E9", "#F0E442")) +
+  labs(x = "Duration (ms)", color = "Genre",
+       y = "Fn(x)") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+---
+
+## Observe significant difference given large dataset size...
+
+```{r, warnings = FALSE}
+spotify_songs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-01-21/spotify_songs.csv')
+table(spotify_songs$playlist_genre)
+rap_duration <- spotify_songs %>% filter(playlist_genre == "rap") %>% pull(duration_ms)
+pop_duration <- spotify_songs %>% filter(playlist_genre == "pop") %>% pull(duration_ms)
+
+ks.test(rap_duration, y = pop_duration)
+```
+
+
+---
+
+## What happens if we had a smaller sample?
+
+```{r}
+set.seed(2017)
+sample_songs <- spotify_songs %>%
+  group_by(playlist_genre) %>% 
+  slice_sample(n = 100)
+
+table(sample_songs$playlist_genre)
+sample_rap_duration <- sample_songs %>% filter(playlist_genre == "rap") %>% pull(duration_ms)
+sample_pop_duration <- sample_songs %>% filter(playlist_genre == "pop") %>% pull(duration_ms)
+
+ks.test(sample_rap_duration, y = sample_pop_duration)
+```
+
+
+---
+
+
+## But it still looks different???
+
+```{r, echo = FALSE, fig.align='center'}
+# Create ECDF plot for just rap and rock
+sample_songs %>%
+  filter(playlist_genre %in% c("rap", "pop")) %>%
+  ggplot(aes(x = duration_ms, color = playlist_genre)) +
+  stat_ecdf() +
+  # Use the same colors based on palette printed out from:
+  # ggthemes::colorblind_pal()(6) - grabbing the last two colors
+  scale_color_manual(values = c("#56B4E9", "#F0E442")) +
+  labs(x = "Duration (ms)", color = "Genre",
+       y = "Fn(x)") +
+  theme_bw() +
+  theme(legend.position = "bottom")
+```
+
+
+---
+
+## Test difference between means and variances?
+
+Can test difference in means using `t.test()`:
+
+```{r}
+t.test(sample_rap_duration, sample_pop_duration)
+```
+
+
+---
+
+## Test difference between means and variances?
+
+Can test difference in variances using `bartlett.test()`:
+
+```{r}
+bartlett.test(list(sample_rap_duration, sample_pop_duration))
+```
+
+
+#### Rejects at $\alpha = 0.05$ even with this smaller sample size!
+
++ Why did the KS test say they weren't different when the graph were clearly different? Two possible reasons:
+
+  + The sample size might be too small to detect a difference
+  
+  + The KS test is known to have low power
+
+---
+
+## Statistical power
+  
+  
++ __Statistical power__ is key to really understanding graphics - you need to know when you're looking at real effects versus noise
+
++ Here are two definitions of power (one in English, one in math):
+
+  + English: The probability that we reject the null hypothesis when the null hypothesis is false.
+  
+  + Math: $P(\text{p-value} \leq \alpha | H_0$ is false)
+  
+--
+
++ Main things that affect statistical power:
+
+  + Bigger differences in the data $\rightarrow$ more power
+  
+  + Smaller variance/error in differences $\rightarrow$ more power
+  
+  + Bigger sample size $\rightarrow$ more power
+  
+  + More appropriate statistical test $\rightarrow$ more power
+
+Also remember: Type 1 error is falsely rejecting; Type 2 error is falsely failing to reject
+
+
+---
+
+## Toy example for understanding statistical power
+
+Consider two samples:
+
+$$(X_1,\dots,X_n) \sim N(0, 1) \\
+(Y_1,\dots,Y_n) \sim N(\delta, 1)$$
+
+Let's say we use `t.test(x, y)`
+
+We'll simulate $\mathbf{X}$ and $\mathbf{Y}$ 1000 times for some $n$ and $\delta > 0$
+
+--
+
+We'll count the number of times we reject
+
+$$\text{Power} = P(\text{p-value} \leq \alpha | H_0 \text{ false}) \\
+            = P(\text{p-value} \leq \alpha | \delta > 0) \\
+            \approx \frac{\text{# times reject}}{1000}$$
+            
+We'll consider $n = 10, 20, \dots, 1000$ and $\delta = 0.1$ or $\delta = 0.25$
+
+
+---
+
+## Toy example: power of $t$-test
+
+```{r, echo = FALSE, cache=TRUE}
+# This code chunk sets up the simulation data results:
+ttest_power_table <-
+  # First iterate over the two effect sizes:
+  map_dfr(c(.1, .25),
+          function(effect_size) {
+            
+            # Now iterate over n:
+            map_dfr(seq(10, 1000, by = 10),
+                    function(n_i) {
+                      
+                      # Run the follow 1000 times:
+                      map_dfr(1:1000,
+                              function(sim_i) {
+                                
+                                # Generate the first sample x:
+                                x <- rnorm(n_i, 0, 1)
+                                # And now y with the effect size:
+                                y <- rnorm(n_i, effect_size, 1)
+                                
+                                # Compute the t.test result:
+                                ttest_result <- t.test(x, y)
+                                
+                                # Return a table with the settings and decision
+                                # to reject with respect to alpha 0.05:
+                                tibble(delta = effect_size,
+                                       sample_size = n_i,
+                                       is_rej = 
+                                         as.numeric(ttest_result$p.value <= 0.05),
+                                       sim_id = sim_i)
+                                
+                              })
+                    })
+          }) %>%
+  group_by(delta, sample_size) %>%
+  summarize(power = mean(is_rej))
+```
 
 
 ```{r, echo = FALSE, fig.align='center'}
-spiral_data %>%
-  ggplot(aes(x, y, color = group)) +
-  geom_point(alpha = 0.75) +
-  ggthemes::scale_color_colorblind() +
+# Generate power curve data for two effect sizes:
+library(latex2exp) # package to use latex math symbols in plots
+ttest_power_table %>%
+  ggplot(aes(x = sample_size, y = power, color = as.factor(delta))) +
+  geom_point() +
+  geom_line() +
   theme_bw() +
-  theme(legend.position = "none") +
-  coord_fixed()
-```
-
-
----
-
-## PCA simply rotates the data...
-
-```{r, echo = FALSE}
-spiral_pca <- prcomp(dplyr::select(spiral_data, x:y), 
-                        center = TRUE, scale. = TRUE)
-spiral_pc_matrix <- spiral_pca$x
-spiral_data <- spiral_data %>%
-  mutate(pc1 = spiral_pc_matrix[,1], 
-         pc2 = spiral_pc_matrix[,2])
-spiral_data %>%
-  ggplot(aes(x = pc1, y = pc2, color = group)) +
-  geom_point(alpha = 0.75) +
-  labs(x = "PC 1", y = "PC 2") +
-  ggthemes::scale_color_colorblind() +
-  theme_bw() +
-  theme(legend.position = "none") +
-  coord_fixed()
+  labs(x = "Sample size n", y = "Power (across 1000 simulations)",
+       color = TeX(r'(Mean shift $\delta$)')) +
+  theme(legend.position = "bottom")
 
 
 ```
@@ -93,313 +365,116 @@ spiral_data %>%
 
 ---
 
-## Nonlinear dimension reduction with t-SNE and UMAP
+## Another toy example 
 
-.pull-left[
-```{r, echo = FALSE, fig.height=7, fig.align='center'}
-library(Rtsne)
-set.seed(1234)
-do_tsne <- function(data, perplexity = 5, theta = 0.3, seed = 1234) {
-  set.seed(seed)
-  tsne_fit <- data %>%
-    select(where(is.numeric)) %>%
-    scale() %>%
-    Rtsne(perplexity = perplexity, theta = theta, check_duplicates = FALSE)
-  tsne_fit$Y %>%
-    as.data.frame() %>%
-    mutate(
-      perplexity = perplexity,
-      theta = theta,
-      seed = seed
-    ) %>%
-    cbind(select(data, -where(is.numeric)))
-}
-tsne_data <- c(1, 2, 3, 4, 5, 10, 15, 20) %>%
-  map_dfr(~do_tsne(spiral_data, perplexity = .x))
-tsne_data %>%
-  filter(perplexity == 5) %>%
-  ggplot(aes(V1, V2, color = group)) + 
-  labs(x = "t-SNE 1", y = "t-SNE 2") +
-  geom_point(alpha = 0.75) +
-  ggthemes::scale_color_colorblind() +
-  theme_bw() +
-  theme(legend.position = "none") +
-  coord_fixed()
+Consider two samples:
 
-```
+$$(X_1,\dots,X_n) \sim N(0, 1) \\
+(Y_1,\dots,Y_n) \sim N(0, 1.5)$$
 
-]
-.pull-right[
-```{r, echo = FALSE, fig.align='center', fig.height=7}
-library(umap)
-do_umap <- function(data, n_neighbors = 15, seed = 123) {
-  custom.config <- umap.defaults
-  custom.config$n_neighbors <- n_neighbors
-  custom.config$random_state <- seed
-  custom.config$n_epochs <- 500 
-  umap_fit <- data %>%
-    select(where(is.numeric)) %>%
-    scale() %>%
-    umap(config = custom.config)
-  umap_fit$layout %>%
-    as.data.frame() %>%
-    mutate(
-      n_neighbors = n_neighbors,
-      seed = seed
-    ) %>%
-    cbind(select(data, -where(is.numeric)))
-}
-umap_data <- c(4, 5, 6, 8, 10, 12, 16, 20) %>%
-  map_dfr(~do_umap(spiral_data, n_neighbors = .x))
-umap_data %>%
-  filter(n_neighbors == 5) %>%
-  ggplot(aes(V1, V2, color = group)) + 
-  labs(x = "UMAP 1", y = "UMAP 2") +
-  geom_point(alpha = 0.75) +
-  ggthemes::scale_color_colorblind() +
-  theme_bw() +
-  theme(legend.position = "none") +
-  coord_fixed()
+Let's consider three ways to test differences:
 
-```
-]
+1. `t.test(x, y)`
 
-Both t-SNE and UMAP look at the local distances between points in the original $p$-dimensional space and try to reproduce them in a lower $k$-dimensional space
+2. `bartlett.test(list(x, y))`
+
+3. `ks.test(x,y)`
+
+We'll simulate $\mathbf{X}$ and $\mathbf{Y}$ 1000 times for samples sizes $n = 10, 20, \dots, 1000$
+
+__What do you think the power curves will look like for these methods?__
 
 ---
 
-### [t-SNE](https://en.wikipedia.org/wiki/T-distributed_stochastic_neighbor_embedding): t-distributed stochastic neighbor embedding
+## Comparison of power for the different tests
 
-- Construct conditional probability for similarity between observations in original space
+```{r, echo = FALSE, cache=TRUE}
+# This code chunk sets up the simulation data results:
+comp_power_table <-
+  # Iterate over n:
+  map_dfr(seq(10, 1000, by = 10),
+          function(n_i) {
+            
+            # Run the follow 1000 times:
+            map_dfr(1:1000,
+                    function(sim_i) {
+                      
+                      # Generate the first sample x:
+                      x <- rnorm(n_i, 0, 1)
+                      # And now y with the different variance:
+                      y <- rnorm(n_i, 0, sqrt(1.5))
+                      
+                      # Compute the test results:
+                      ttest_result <- t.test(x, y)
+                      bartlett_result <- bartlett.test(list(x, y))
+                      ks_result <- ks.test(x, y)
+                      
+                      # Return a table with the settings and decision
+                      # to reject with respect to alpha 0.05:
+                      tibble(test_type = c("t-test", "Bartlett's test", 
+                                           "KS test"),
+                             pval = c(ttest_result$p.value,
+                                      bartlett_result$p.value,
+                                      ks_result$p.value)) %>%
+                        mutate(is_rej = as.numeric(pval <= 0.05),
+                               sample_size = n_i,
+                               sim_id = sim_i)
+                      
+                    })
+          }) %>%
+  group_by(test_type, sample_size) %>%
+  summarize(power = mean(is_rej))
+```
 
-  - i.e., probability $x_i$ will pick $x_j$ as its neighbor 
 
-$$p_{j \mid i}=\frac{\exp \left(-\left\|x_i-x_j\right\|^2 / 2 \sigma_i^2\right)}{\sum_{k \neq i} \exp \left(-\left\|x_i-x_k\right\|^2 / 2 \sigma_i^2\right
-)},\quad p_{i j}=\frac{\left(p_{j \mid i}+p_{i \mid j}\right)}{2 n}$$
+```{r, echo = FALSE, fig.align='center'}
+# Generate power curve data for these methods
+comp_power_table %>%
+  ggplot(aes(x = sample_size, y = power, color = test_type)) +
+  geom_point() +
+  geom_line() +
+  ggthemes::scale_color_colorblind() +
+  theme_bw() +
+  labs(x = "Sample size n", y = "Power (across 1000 simulations)",
+       color = "Test") +
+  theme(legend.position = "bottom")
 
-- $\sigma_i$ is the variance of Gaussian centered at $x_i$ controlled by __perplexity__:  $\log (\text { perplexity })=-\sum_j p_{j \mid i} \log _2 p_{j \mid i}$
 
-  -  loosely interpreted as the number of close neighbors to consider for each point
+```
+
+
+---
+
+# Main takeaways
+
+Graphics are a great way to see if there are differences in distributions, however... 
+
++ Graphics should be paired with statistical analyses to determine if what
+you see is a _true effect_ versus noise
+
++ __Even if there is a true effect, you may have limited power to detect it__
+
++ Some effects are easier to detect than others
   
---
+__Remember: Power is the probability you reject when the null is false__
 
-- Find points $y_i$ in lower dimensional space with symmetrized student t-distribution
+Things that increase statistical power:
 
-$$q_{j \mid i}=\frac{\left(1+\left\|y_i-y_j\right\|^2\right)^{-1}}{\sum_{k \neq i}\left(1+\left\|y_i-y_k\right\|^2\right)^{-1}}, \quad q_{i j}=\frac{q_{i \mid j}+q_{j \mid i}}{2 n}$$
-- Match conditional probabilities by minimize sum of KL divergences $C=\sum_{i j} p_{i j} \log \left(\frac{p_{i j}}{q_{i j}}\right)$
++ Increase sample size
 
----
++ Reduce variance/error
 
-## Starbucks t-SNE plot
++ Increase differences / effects
 
-.pull-left[
-
-Use [`Rtsne`](https://github.com/jkrijthe/Rtsne) package 
-
-```{r starbucks-tsne, eval = FALSE}
-set.seed(2013)
-tsne_fit <- starbucks %>%
-  dplyr::select(serv_size_m_l:caffeine_mg) %>%
-  scale() %>%
-  Rtsne(check_duplicates = FALSE) #<<
-
-starbucks %>%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %>%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) + 
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-
-```
-
-
-]
-
-.pull-right[
-
-```{r ref.label="starbucks-tsne", fig.height=7, echo = FALSE}
-
-```
-
-
-]
-
-
----
-
-## Starbucks t-SNE plot - involves randomness!
-
-.pull-left[
-
-__Depends on the random starting point!__
-
-```{r starbucks-tsne-rand, eval = FALSE}
-set.seed(2014) #<<
-tsne_fit <- starbucks %>%
-  dplyr::select(serv_size_m_l:caffeine_mg) %>%
-  scale() %>%
-  Rtsne(check_duplicates = FALSE) #<<
-
-starbucks %>%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %>%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-
-```
-
-
-]
-
-.pull-right[
-
-```{r ref.label="starbucks-tsne-rand", fig.height=7, echo = FALSE}
-
-```
-
-
-]
-
----
-
-## Starbucks t-SNE plot - watch the perplexity!
-
-.pull-left[
-
-
-```{r starbucks-tsne-perp, eval = FALSE}
-set.seed(2013) #<<
-tsne_fit <- starbucks %>%
-  dplyr::select(serv_size_m_l:caffeine_mg) %>%
-  scale() %>%
-  Rtsne(perplexity = 100, #<<
-        check_duplicates = FALSE)
-
-starbucks %>%
-  mutate(tsne1 = tsne_fit$Y[,1],
-         tsne2 = tsne_fit$Y[,2]) %>%
-  ggplot(aes(x = tsne1, y = tsne2, 
-             color = size)) +
-  geom_point(alpha = 0.5) +
-  labs(x = "t-SNE 1", y = "t-SNE 2")
-
-```
-
-- Increases with more data
-
-- Should not be bigger than $\frac{n-1}{3}$
-
-]
-
-.pull-right[
-
-```{r ref.label="starbucks-tsne-perp", fig.height=7, echo = FALSE}
-
-```
-
-
-]
-
----
-
-## Back to the spirals: results depend on perplexity!
-
-
-```{r, echo = FALSE}
-ggplot(tsne_data, aes(V1, V2, color = group)) + 
-  geom_point(alpha = 0.75) +
-  facet_wrap(
-    vars(perplexity),
-    labeller = as_labeller(function(x) glue::glue("perplexity = {x}")),
-    scales = "free",
-    nrow = 2
-  ) +
-  labs(x = "t-SNE 1", y = "t-SNE 2") +
-  ggthemes::scale_color_colorblind() +
-  theme_bw() +
-  theme(legend.position = "none")
-```
-
-
----
-
-## Criticisms of t-SNE plots
-
-.pull-left[
-
-- __Poor scalability__: does not scale well for large data, can practically
-only embed into 2 or 3 dimensions
-
-- __Meaningless global structure__: distance between clusters might not
-have clear interpretation and cluster size doesn’t have any meaning to
-it
-
-- __Poor performance with very high dimensional data__: need PCA as
-pre-dimension reduction step
-
-- [__Sometime random noise can lead to false positive structure in the
-t-SNE projection__](https://distill.pub/2016/misread-tsne/)
-
-- __Can NOT interpret like PCA!__
-
-]
-
-.pull-right[
-```{r ref.label="starbucks-tsne-perp", fig.height=7, echo = FALSE}
-
-```
-]
-
----
-
-## Interactive web apps with [`Shiny`](https://shiny.rstudio.com/)
-
-Shiny is a framework to __interactive__ web applications and dynamic dashboards in `R`
-
-__You do NOT need to be a web developer to create Shiny apps__, you just need to learn some additional syntax to augment your `R` code 
-
---
-
-Every Shiny app consists of two scripts (could also be saved into one file `app.R` but that's annoying)
-
-1. `ui.R`: controls __user interface__, sets up the display, __widgets__ for user `input`
-
-  - contains more code specific to Shiny
-
-2. `server.R`: code to generate / display the results! Communicates with `ui.R` with __reactive objects__: processes user `input` to return `output`
-
-  - will contain more _traditional_ `R` code: load packages, data wrangling, create plots
-  
---
-
-Can be run locally or deployed on a Shiny app server for public viewing
++ Choose appropriate tests!
 
 
 ---
 class: center, middle
 
-# DO IT LIVE
+# Next time: 2D Quantitative Data: Scatterplots and Linear Regression
 
-
----
-class: center, middle
-
-# Next time: Maps
-
-__HW4 due today! HW5 due next Wednesday and Graphics Critique / Replication #2 due Friday Oct 7th!__ 
-
-Recommended reading: 
-
-[How to Use t-SNE Effectively](https://distill.pub/2016/misread-tsne/)
-
-[Understanding UMAP](https://pair-code.github.io/understanding-umap/)
-
-[Shiny tutorials](https://shiny.rstudio.com/tutorial/)
-
-[Shiny Gallery](https://shiny.rstudio.com/gallery/)
+Reminder: __HW3 due tonight!__  __Graphics critique due Feb 28th!__
 
 
 

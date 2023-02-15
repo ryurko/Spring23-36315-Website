@@ -31,6 +31,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 6       | 1D Quantitative Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec6#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec6.Rmd) |
 | 7       | Density Estimation | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec7#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec7.Rmd) |
 | 8       | Graphical Inference for 1D Quantitative Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec8#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec8.Rmd) |
+| 9       | Comparing Distributions and Statistical Power | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec9#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec9.Rmd) |
 
 
 
