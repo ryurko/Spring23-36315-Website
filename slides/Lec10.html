@@ -1,14 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>36-613: Data Visualization</title>
+    <title>36-315 Lecture 10</title>
     <meta charset="utf-8" />
     <meta name="author" content="Professor Ron Yurko" />
     <script src="libs/header-attrs/header-attrs.js"></script>
-    <script src="libs/fabric/fabric.min.js"></script>
-    <link href="libs/xaringanExtra-scribble/scribble.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-scribble/scribble.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() { window.xeScribble = new Scribble({"pen_color":["#FF0000"],"pen_size":3,"eraser_size":30,"palette":[]}) })</script>
     <script src="libs/clipboard/clipboard.min.js"></script>
     <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
     <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
@@ -20,16 +16,16 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# 36-613: Data Visualization
+# 36-315 Lecture 10
 ]
 .subtitle[
-## Visualizing Spatial Data and Maps
+## 2D Quantitative Data: Scatterplots and Linear Regression
 ]
 .author[
 ### Professor Ron Yurko
 ]
 .date[
-### 10/3/2022
+### 2/20/2023
 ]
 
 ---
@@ -43,431 +39,456 @@ class: center, middle, inverse, title-slide
 
 
 
-# How should we think about spatial data?
+## Let's talk about the take-home exam
 
-- Typically location is measured with __latitude__ / __longitude__ (2D)
+* Here's the timeline for the next two weeks:
 
-- __Latitude__: Measures North / South (the "y-axis")
+  + __HW4 is due Wednesday Feb 22nd at 11:59 PM EDT!__
+  
+  + __Take-home exam is next week Wednesday March 1st__
+  
+* Here's how the exam will work:
 
-  - Range is `\((-90^{\circ}, 90^{\circ})\)`
+  + I'll post the exam Tuesday evening, and it's due Wednesday by 11:59 PM EDT (March 1st)
   
-  - Measures degrees from the equator `\((0^{\circ})\)`
+  + Exam will cover material from homeworks 1-4 and labs 1-6
   
-  - `\((-90^{\circ}, 0^{\circ})\)` = southern hemisphere 
+  + Questions will be similar to homeworks but more open-ended, e.g, instead of "make a side-by-side boxplot..." I'll ask "Make a plot that compares the conditional distributions..."
   
-  - `\((0^{\circ}, 90^{\circ})\)` = northern hemisphere 
+  + __There will NOT be class on Wednesday March 1st__ - instead I will hold office hours during the class time for clarifying questions about the exam. __This will be over zoom with one-on-one interactions via Waiting Room feature__
+  
+  + Conflict March 1st? __Let me know ASAP!__ Day-of accomodations won't be made, late submissions will NOT be accepted
+  
+---
+
+## Conceptual Review
+
+We've seen 1D and 2D categorical data, and 1D quantitative data combined with categorical data
+
+* Mosaicplots: Great for visualizing inference for 2D categorical data
+
+* Facetted histograms, side-by-side violins, overlayed densities: Great for comparing subsets of 1D quantitative data
+
+
+Several ways to formally compare distributions:
+
+* `\(t\)`-test: Compare means
+
+* Bartlett's test: Compare variances
+
+* KS test: Compare distributions
+
+Statistical power (probability of correctly rejecting the null) is important when interpreting graphs and analyses
+
+__Today: 2D quantitative data, scatterplots, and linear regression__ 
+
+---
+
+## 2D quantitative data
+
+- We're working with two variables: `\((X, Y) \in \mathbb{R}^2\)`, i.e., dataset with `\(n\)` rows and 2 columns
+
+--
+
+- Goals:
+
+  - describing the relationships between two variables
+  
+  - describing the conditional distribution `\(Y | X\)` via regression analysis
+  
+  - describing the joint distribution `\(X,Y\)` via contours, heatmaps, etc.
   
 --
 
-- __Longitude__: Measures East/West (the "x-axis")
+- Few big picture ideas to keep in mind:
 
-  - Range is `\((-180^{\circ}, 180^{\circ})\)`
+  - scatterplots are by far the most common visual
   
-  - Measures degrees from the prime meridian `\((0^{\circ})\)` in Greenwich, England
+  - regression analysis is by far the most popular analysis (you will have several classes on this...)
   
-  - `\((-180^{\circ}, 0^{\circ})\)` = eastern hemisphere
+  - there are many types of nonlinear relationships
   
-  - `\((0^{\circ}, 180^{\circ})\)` = western hemisphere
-
-
----
-
-# Latitude and Longitude
-
-
-&lt;img src="https://c.tadst.com/gfx/1200x630/longitude-and-latitude-simple.png?1" width="80%" style="display: block; margin: auto;" /&gt;
-
----
-
-# Map Projections
-
-- Earth is a 3D object, but maps are 2D objects
-
-- __Map projections__: Transformation of the lat / long coordinates on a sphere (the earth) to a 2D plane
+  - relationships may vary across other variables, e.g., categorical variables
   
-- There are many different projections - each will distort the map in different ways.
+---
 
-- The most common projections are:
+## Making scatterplots with `geom_point()`
 
-  - [Mercator](https://en.wikipedia.org/wiki/Mercator_projection)
-  - [Robinson](https://en.wikipedia.org/wiki/Robinson_projection)
-  - [Conic](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Conic%20projections.htm#:~:text=Conic%20projections%20are%20created%20by,a%20developable%20map%20projection%20surface.)
-  - [Cylindrical](https://en.wikipedia.org/wiki/Map_projection#Cylindrical)
-  - [Planar](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Planar%20projections.htm)
-  - [Interrupted projections](https://en.wikipedia.org/wiki/Interruption_(map_projection))
+.pull-left[
+
+
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm)) +
+* geom_point()
+```
+
+- Displaying the joint distribution
+
+- What is the __obvious flaw__ with this plot?
+
+]
+
+.pull-right[
+
+&lt;img src="figs/Lec10/unnamed-chunk-2-1.png" width="100%" /&gt;
+
+]
 
 
 ---
 
-# Mercator Projection (1500s)
+## Making scatterplots: ALWAYS adjust the `alpha`
+
+.pull-left[
 
 
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Mercator_projection_Square.JPG/700px-Mercator_projection_Square.JPG" width="60%" style="display: block; margin: auto;" /&gt;
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm)) +
+* geom_point(alpha = 0.5)
+```
+
+- Adjust the transparency of points via `alpha` to __visualize overlap__ 
+
+- Provides better understanding of joint frequency
+
+- Especially important with larger datasets
+
+
+
+]
+
+.pull-right[
+
+&lt;img src="figs/Lec10/unnamed-chunk-3-1.png" width="100%" /&gt;
+
+]
+
+---
+
+## Making scatterplots: map categorical variable to `color`
+
+
+
+```r
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+*                    color = species)) +
+  geom_point(alpha = 0.5) 
+```
+
+&lt;img src="figs/Lec10/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Making scatterplots: map continuous variable to `color`
+
+
+
+```r
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+*                    color = body_mass_g)) +
+  geom_point(alpha = 0.5) 
+```
+
+&lt;img src="figs/Lec10/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 
 ---
 
-# Mercator Projection (Tissot indicatrix)
+## Making scatterplots: map continuous variable to `color`
 
 
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg.png" width="60%" style="display: block; margin: auto;" /&gt;
 
+```r
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     color = body_mass_g)) +
+  geom_point(alpha = 0.5) +
+* scale_color_gradient(low = "darkblue", high = "darkorange")
+```
 
----
-
-# Robinson Projection (Standard from 1963-1998)
-
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Robinson_projection_SW.jpg/700px-Robinson_projection_SW.jpg" width="70%" style="display: block; margin: auto;" /&gt;
-
-
----
-
-# Robinson Projection (Tissot indicatrix)
-
-
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg.png" width="70%" style="display: block; margin: auto;" /&gt;
+&lt;img src="figs/Lec10/unnamed-chunk-6-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 
 ---
 
-# Winkel Tripel Projection (proposed 1921, now the standard)
+## Making scatterplots: map continuous variable to `size`
 
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Winkel_triple_projection_SW.jpg/660px-Winkel_triple_projection_SW.jpg" width="60%" style="display: block; margin: auto;" /&gt;
 
----
 
-# Winkel Tripel Projection (Tissot indicatrix)
+```r
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+*                    size = body_mass_g)) +
+  geom_point(alpha = 0.5) 
+```
 
-&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg/660px-Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg.png" width="60%" style="display: block; margin: auto;" /&gt;
-
----
-
-# And many more... (see [xkcd comic](https://xkcd.com/977/))
-
-&lt;img src="https://i.pinimg.com/originals/2d/03/cf/2d03cffa216afb23fa50fb07fc1221b1.jpg" width="60%" style="display: block; margin: auto;" /&gt;
-
+&lt;img src="figs/Lec10/unnamed-chunk-7-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-## Visualizing spatial data on maps using [`ggmap`](https://cran.r-project.org/web/packages/ggmap/readme/README.html)
+## Making scatterplots: map categorical variable to `shape`
+
+
+
+```r
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+*                    shape = species)) +
+  geom_point(alpha = 0.5) 
+```
+
+&lt;img src="figs/Lec10/unnamed-chunk-8-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Making scatterplots: ALL AT ONCE!
+
+
+.pull-left[
+
+```r
+penguins %&gt;%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm,
+*            color = species,
+*            shape = island,
+*            size = body_mass_g)) +
+  geom_point(alpha = 0.5) 
+```
+
+- 5 dimensions at once!
+
+- But we should be careful about this...
+
+]
+.pull-right[
+&lt;img src="figs/Lec10/unnamed-chunk-9-1.png" width="100%" /&gt;
+
+]
+
+
+
+---
+
+&lt;img src="https://images.squarespace-cdn.com/content/v1/5ce45e9df03bfe000172d138/1597870238202-3OWP5306LOI8P2HP02EN/Jeff+Goldblum+Your+Scientists+Were+so+preoccupied+with+whether+or+not+they+could+they+didn%27t+stop+to+think+if+they+should.jpg" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Displaying trend lines: linear regression
 
 .pull-left[
 
 
 ```r
-library(ggmap)
-# First, we'll draw a "box" around the US
-# (in terms of latitude and longitude)
-US &lt;- c(left = -125, bottom = 10, 
-        right = -67, top = 49)
-map &lt;- get_stamenmap(US, zoom = 5, 
-                     maptype = "toner-lite")
-
-# Visualize the basic map
-*ggmap(map)
+penguins %&gt;%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+* geom_smooth(method = "lm")
 ```
 
-- Draw map based on lat / lon coordinates
+- Displays `body_mass_g ~ flipper_length_mm` regression line
 
-- Put the box into `get_stamenmap()` to access [Stamen Maps](http://maps.stamen.com/#terrain/12/37.7706/-122.3782)
+- Adds 95% confidence intervals by default
 
-- Draw the map using `ggmap()` to serve as base
+- Estimating the __conditional expectation__ of `body_mass_g` | `flipper_length_mm`, 
+
+  - i.e., `\(\mathbb{E}[Y | X]\)`
+
 
 ]
-
 .pull-right[
-&lt;img src="figs/Lec10/unnamed-chunk-10-1.png" width="100%" /&gt;
+
+&lt;img src="figs/Lec10/unnamed-chunk-11-1.png" width="100%" /&gt;
+
 
 ]
 
 ---
 
-# Three main types of spatial data
+## Setup and motivation for linear regression
 
+Consider an outcome `\(Y \in \mathbb{R}\)` and covariate `\(X \in \mathbb{R}\)`
 
-1. __Point Pattern Data__: lat-long coordinates where events have occurred
-
-2. __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates.
-
-3. __Areal Data__: Geographic regions with one or more variables associated with those regions.
-
---
-
-- Each type is structured differently within a dataset
-
-- Each type requires a different kind of graph(s)
-
----
-
-# Point-Pattern data
-
-- __Point Pattern Data__: lat-long coordinates where events have occurred
-
-- __Point pattern data simply records the lat-long of events__; thus, there are only two columns
-
-- Again, latitude and longitude are represented with dots, sometimes called a dot or bubble map.
+  + We have `\(n\)` observations: `\((X_1, Y_1), \dots, (X_n, Y_n)\)`
+  
+Purpose of regression is to model `\(\mathbb{E}[Y | X]\)`
 
 --
 
-- The goal is to understand how the __density__ of events varies across space
+Consider the case where `\(X\)` takes on discrete values `\(c_1, \dots, c_k\)`
 
-- The density of the dots can also be visualized (e.g., with contours)
+Then most straightforward way to estimate `\(\mathbb{E}[Y | X = c_j]\)` is to use the sample mean for subgroup `\(X_i = c_j\)`:
 
-  - __Use methods we've discussed before for visualizing 2D joint distribution__
+`$$\hat{\mathbb{E}}[Y|X = c_j] = \frac{1}{N_j} \sum_{i: X_i = c_j} Y_i$$`
 
++ Graphs like side-by-side violin plots, facetted histograms, and overlaid density plots essentially compare `\(\hat{\mathbb{E}}[Y|X = c_j]\)` for different categories
+
+But when `\(X\)` is quantitative, what do we do?
+
++ Use statistical model to "guess" what `\(\mathbb{E}[Y|X = x]\)` is, even when we don't observe `\(X = x\)`
 
 ---
 
-# Point-Referenced data
+## Statistical Model for Linear Regression
 
-- __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates
+Linear regression assumes `\(Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)\)`
 
-- Point-referenced data will have the following form:
+- `\(\beta_0\)`: _intercept_ - population mean outcome when `\(X = 0\)`; i.e., `\(\mathbb{E}[Y | X = 0]\)`
 
+- `\(\beta_1\)`: _slope_ - population mean _change_ in `\(Y\)` when `\(X\)` increases by 1
 
-```r
-airports %&gt;% dplyr::select(lat, lon, altitude, n_depart, n_arrive, name) %&gt;% slice(1:3)
-```
-
-```
-## # A tibble: 3 × 6
-##     lat   lon altitude n_depart n_arrive name                        
-##   &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;int&gt;    &lt;int&gt; &lt;chr&gt;                       
-## 1 -6.08  145.     5282        5        5 Goroka Airport              
-## 2 -5.21  146.       20        8        8 Madang Airport              
-## 3 -5.83  144.     5388       10       12 Mount Hagen Kagamuga Airport
-```
+- `\(\beta_0\)` and `\(\beta_1\)` are parameters that must be estimated
 
 --
 
-- The goal is to understand how the variable(s) (e.g., `altitude`) vary across different spatial locations
+The assumptions baked into this model are:
 
-- Typically, the latitude and longitude are represented with dots, and the variable(s) are represented with size and/or colors
+1. Normality
+
+2. Equal variance
+
+3. Independent errors
+
+4. Linearity
+
+5. Fixed `\(X\)`
+
 
 ---
 
-## Adding points to the map as usual
+## Assessing assumptions of linear regression
+
+Linear regression assumes `\(Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)\)`
+
+- If this is true, then `\(Y_i - \hat{Y}_i \overset{iid}{\sim} N(0, \sigma^2)\)`
+
+--
+
+Plot residuals against `\(\hat{Y}_i\)`, __residuals vs fit__ plot
+
+- Used to assess linearity, any divergence from mean 0
+
+- Used to assess equal variance, i.e., if `\(\sigma^2\)` is homogenous across predictions/fits `\(\hat{Y}_i\)`
+
+--
+
+More difficult to assess the independence and fixed `\(X\)` assumptions
+
+- Make these assumptions based on subject-matter knowledge
+
+---
+
+## Residual vs fit plots
 
 .pull-left[
 
 
 ```r
-ggmap(map) +
-* geom_point(data = airports,
-             aes(x = lon, y = lat),
-             alpha = 0.25)
+lin_reg &lt;- 
+* lm(body_mass_g ~ flipper_length_mm,
+     data = penguins)
+
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %&gt;%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+* geom_hline(yintercept = 0,
+*            linetype = "dashed",
+             color = "red")
 ```
 
-- Display locations of airports using `geom_point()` layer, need to specify `data` for layer
+Two things to look for:
 
-- Currently viewing __point-pattern__ data 
+1. Any trend around horizontal reference line?
+
+2. Equal vertical spread?
 
 ]
 
 .pull-right[
+
 &lt;img src="figs/Lec10/unnamed-chunk-12-1.png" width="100%" /&gt;
 
-]
 
+]
 
 ---
 
-## Altering points on the map (in the usual way)
+## Residual vs fit plots
 
 .pull-left[
 
 
 ```r
-ggmap(map) +
-  geom_point(data = airports, 
-             aes(x = lon, y = lat, 
-*                size = sqrt(n_depart),
-*                color = sqrt(n_arrive)),
-             alpha = .5) +
-  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
-                  labels = c(1, 5, 10, 50, 100, 500), 
-                  name = "# departures") +
-  scale_color_distiller(palette = "Spectral") +
-  labs(color = "sqrt(# arrivals)") +
-  theme(legend.position = "bottom")
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %&gt;%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, 
+             linetype = "dashed",
+             color = "red") +
+* geom_smooth()
 ```
 
+Two things to look for:
 
-- Displaying additional variables through `aes`
+1. Any trend around horizontal reference line? 
 
+  - add `geom_smooth` to highlight this
+
+2. Equal vertical spread?
 
 ]
 
 .pull-right[
+
 &lt;img src="figs/Lec10/unnamed-chunk-13-1.png" width="100%" /&gt;
 
-]
-
----
-
-## Thinking about areal data
-
-- __Areal Data__: Geographic regions associated with one or more variables specific to those regions
-
-- Areal data will have the following form (example US states data from 1970s):
-
-
-
-
-```r
-state_data %&gt;% dplyr::slice(1:3)
-```
-
-```
-## # A tibble: 3 × 9
-##   Population Income Illiteracy `Life Exp` Murder `HS Grad` Frost   Area state  
-##        &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;  
-## 1       3615   3624        2.1       69.0   15.1      41.3    20  50708 alabama
-## 2        365   6315        1.5       69.3   11.3      66.7   152 566432 alaska 
-## 3       2212   4530        1.8       70.6    7.8      58.1    15 113417 arizona
-```
-
-
---
-
-- Need to match the region with the actual geographic boundaries
-
-- Many geographic boundaries/features are stored as "shapefiles"
-
-  - i.e., complicated polygons
-  
-- Can contain the lines, points, etc. to represent any geographic feature
-
-- Shapefiles are readily available for countries, states, counties, etc.
-
-
----
-
-## Access shapefiles using `map_data()` 
-
-.pull-left[
-
-
-```r
-library(maps)
-state_borders &lt;- map_data("state") 
-head(state_borders)
-```
-
-```
-##        long      lat group order  region subregion
-## 1 -87.46201 30.38968     1     1 alabama      &lt;NA&gt;
-## 2 -87.48493 30.37249     1     2 alabama      &lt;NA&gt;
-## 3 -87.52503 30.37249     1     3 alabama      &lt;NA&gt;
-## 4 -87.53076 30.33239     1     4 alabama      &lt;NA&gt;
-## 5 -87.57087 30.32665     1     5 alabama      &lt;NA&gt;
-## 6 -87.58806 30.32665     1     6 alabama      &lt;NA&gt;
-```
-
-- For example: `map_data("world")`, `map_data("state")`, `map_data("county")` (need to install [`maps` package](https://cran.r-project.org/web/packages/maps/maps.pdf))
-
-- Contains lat/lon coordinates to draw geographic boundaries
-
-]
-
---
-
-.pull-right[
-
-- Typical workflow for plotting areal data (e.g., using states):
-
-  - Get state-specific data
-  
-  - Get state boundaries
-  
-  - Merge state-specific data with state boundaries (using `left_join()`)
-  
-
-```r
-state_plot_data &lt;- state_borders %&gt;%
-* left_join(state_data,
-*           by = c("region" = "state"))
-```
-  
-  
-  - Then plot the data
 
 ]
 
 ---
 
-## Create a choropleth map with `geom_polygon()`
-
-.pull-left[
+## Examples of Residual-vs-Fit Plots
 
 
-```r
-state_plot_data %&gt;%
-  ggplot() + 
-* geom_polygon(aes(x = long, y = lat,
-*                  group = group,
-*                  fill = Illiteracy),
-*              color = "black") +
-  scale_fill_gradient2(
-    low = "darkgreen",
-    mid = "lightgrey", 
-    high = "darkorchid4",
-    midpoint = 0.95) +
-  theme_void() +
-* coord_map("polyconic") +
-  labs(fill = "Illiteracy %") + 
-  theme(legend.position = "bottom")
-```
-
-
-]
-.pull-right[
-&lt;img src="figs/Lec10/unnamed-chunk-18-1.png" width="100%" /&gt;
-
-]
 
 ---
 
-## Uniform size with [`statebins`](https://github.com/hrbrmstr/statebins)
+## Main Takeaways
 
-.pull-left[
+#### Scatterplots are the most common visual for 2D quantitative variables
 
++ Many ways to incorporate additional dimensions in scatterplots, e.g., color and shape
 
-```r
-library(statebins)
-state_data$new_state &lt;- 
-  str_to_title(state_data$state)
-*statebins(state_data = state_data,
-          state_col = "new_state",
-          value_col = "Illiteracy") +
-  theme_statebins()
-```
++ Allows you to assess if the relationship between `\(X_1\)` and `\(X_2\)` depends on other variables
 
-- Make all states equal in size
+Linear regression is by far the most common model for describing the relationship between 2+ quantitative variables
 
-- Keeps spatial arrangement but focus is on the variable of interest displayed by the color
++ Can also transform the outcome
 
-]
++ Can also transform the covariates
 
-.pull-right[
-&lt;img src="figs/Lec10/unnamed-chunk-19-1.png" width="100%" /&gt;
++ Can also do nonparametric "smoothing"
 
-]
-
+#### Use graphs to assess linear regression assumptions
 
 ---
 class: center, middle
 
-# Next time: Visualizing text data
+# Next time: Inference with Linear Regression
 
-__HW5 due Wednesday! Graphics Critique / Replication #2 due Friday Oct 7th!__ 
+Reminder: __HW4 due Wednesday!__  __Graphics critique due Feb 28th!__
 
 Recommended reading: 
 
-[CW Chapter 15 Visualizing geospatial data](https://clauswilke.com/dataviz/geospatial-data.html)
-
-[KH Chapter 7 Draw Maps](https://socviz.co/maps.html#maps)
-
+[CW Chapter 12 Visualizing associations among two or more quantitative variables](https://clauswilke.com/dataviz/visualizing-associations.html)
 
 
     </textarea>

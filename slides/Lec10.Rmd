@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "Visualizing Spatial Data and Maps"  
+title: "36-315 Lecture 10"
+subtitle: "2D Quantitative Data: Scatterplots and Linear Regression"  
 author: 
   - "Professor Ron Yurko"
-date: '10/3/2022'
+date: '2/20/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec10/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,7 +36,7 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
@@ -44,455 +44,450 @@ style_duo_accent(
 
 ```{r, include = FALSE}
 library(tidyverse)
-airports <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat",
-                     col_names = c("ID", "name", "city", "country", "IATA_FAA", 
-                                   "ICAO", "lat", "lon", "altitude", "timezone", "DST"))
-
-routes <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/routes.dat",
-                   col_names = c("airline", "airlineID", "sourceAirport", 
-                                 "sourceAirportID", "destinationAirport", 
-                                 "destinationAirportID", "codeshare", "stops",
-                                 "equipment"))
-
-departures <- routes %>% 
-  group_by(sourceAirportID) %>%
-  summarize(n_depart = n()) %>%
-  mutate(sourceAirportID = as.integer(sourceAirportID))
-
-arrivals <- routes %>% 
-  group_by(destinationAirportID) %>% 
-  summarize(n_arrive = n()) %>% 
-  mutate(destinationAirportID = as.integer(destinationAirportID))
-
-airports <- airports %>%
-  left_join(departures, by = c("ID" = "sourceAirportID"))
-airports <- airports %>%
-  left_join(arrivals, by = c("ID" = "destinationAirportID"))
+library(palmerpenguins)
 ```
 
 
-# How should we think about spatial data?
+## Let's talk about the take-home exam
 
-- Typically location is measured with __latitude__ / __longitude__ (2D)
+* Here's the timeline for the next two weeks:
 
-- __Latitude__: Measures North / South (the "y-axis")
+  + __HW4 is due Wednesday Feb 22nd at 11:59 PM EDT!__
+  
+  + __Take-home exam is next week Wednesday March 1st__
+  
+* Here's how the exam will work:
 
-  - Range is $(-90^{\circ}, 90^{\circ})$
+  + I'll post the exam Tuesday evening, and it's due Wednesday by 11:59 PM EDT (March 1st)
   
-  - Measures degrees from the equator $(0^{\circ})$
+  + Exam will cover material from homeworks 1-4 and labs 1-6
   
-  - $(-90^{\circ}, 0^{\circ})$ = southern hemisphere 
+  + Questions will be similar to homeworks but more open-ended, e.g, instead of "make a side-by-side boxplot..." I'll ask "Make a plot that compares the conditional distributions..."
   
-  - $(0^{\circ}, 90^{\circ})$ = northern hemisphere 
+  + __There will NOT be class on Wednesday March 1st__ - instead I will hold office hours during the class time for clarifying questions about the exam. __This will be over zoom with one-on-one interactions via Waiting Room feature__
+  
+  + Conflict March 1st? __Let me know ASAP!__ Day-of accomodations won't be made, late submissions will NOT be accepted
+  
+---
+
+## Conceptual Review
+
+We've seen 1D and 2D categorical data, and 1D quantitative data combined with categorical data
+
+* Mosaicplots: Great for visualizing inference for 2D categorical data
+
+* Facetted histograms, side-by-side violins, overlayed densities: Great for comparing subsets of 1D quantitative data
+
+
+Several ways to formally compare distributions:
+
+* $t$-test: Compare means
+
+* Bartlett's test: Compare variances
+
+* KS test: Compare distributions
+
+Statistical power (probability of correctly rejecting the null) is important when interpreting graphs and analyses
+
+__Today: 2D quantitative data, scatterplots, and linear regression__ 
+
+---
+
+## 2D quantitative data
+
+- We're working with two variables: $(X, Y) \in \mathbb{R}^2$, i.e., dataset with $n$ rows and 2 columns
+
+--
+
+- Goals:
+
+  - describing the relationships between two variables
+  
+  - describing the conditional distribution $Y | X$ via regression analysis
+  
+  - describing the joint distribution $X,Y$ via contours, heatmaps, etc.
   
 --
 
-- __Longitude__: Measures East/West (the "x-axis")
+- Few big picture ideas to keep in mind:
 
-  - Range is $(-180^{\circ}, 180^{\circ})$
+  - scatterplots are by far the most common visual
   
-  - Measures degrees from the prime meridian $(0^{\circ})$ in Greenwich, England
+  - regression analysis is by far the most popular analysis (you will have several classes on this...)
   
-  - $(-180^{\circ}, 0^{\circ})$ = eastern hemisphere
+  - there are many types of nonlinear relationships
   
-  - $(0^{\circ}, 180^{\circ})$ = western hemisphere
-
-
----
-
-# Latitude and Longitude
-
-
-```{r, echo = FALSE, fig.align='center', out.width="80%"}
-knitr::include_graphics("https://c.tadst.com/gfx/1200x630/longitude-and-latitude-simple.png?1")
-```
-
----
-
-# Map Projections
-
-- Earth is a 3D object, but maps are 2D objects
-
-- __Map projections__: Transformation of the lat / long coordinates on a sphere (the earth) to a 2D plane
+  - relationships may vary across other variables, e.g., categorical variables
   
-- There are many different projections - each will distort the map in different ways.
-
-- The most common projections are:
-
-  - [Mercator](https://en.wikipedia.org/wiki/Mercator_projection)
-  - [Robinson](https://en.wikipedia.org/wiki/Robinson_projection)
-  - [Conic](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Conic%20projections.htm#:~:text=Conic%20projections%20are%20created%20by,a%20developable%20map%20projection%20surface.)
-  - [Cylindrical](https://en.wikipedia.org/wiki/Map_projection#Cylindrical)
-  - [Planar](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Planar%20projections.htm)
-  - [Interrupted projections](https://en.wikipedia.org/wiki/Interruption_(map_projection))
-
-
 ---
 
-# Mercator Projection (1500s)
-
-
-```{r, echo = FALSE, fig.align='center', out.width="60%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Mercator_projection_Square.JPG/700px-Mercator_projection_Square.JPG")
-```
-
-
----
-
-# Mercator Projection (Tissot indicatrix)
-
-
-```{r, echo = FALSE, fig.align='center', out.width="60%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
-```
-
-
----
-
-# Robinson Projection (Standard from 1963-1998)
-
-```{r, echo = FALSE, fig.align='center', out.width="70%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Robinson_projection_SW.jpg/700px-Robinson_projection_SW.jpg")
-```
-
-
----
-
-# Robinson Projection (Tissot indicatrix)
-
-
-```{r, echo = FALSE, fig.align='center', out.width="70%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
-```
-
-
----
-
-# Winkel Tripel Projection (proposed 1921, now the standard)
-
-```{r, echo = FALSE, fig.align='center', out.width="60%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Winkel_triple_projection_SW.jpg/660px-Winkel_triple_projection_SW.jpg")
-```
-
----
-
-# Winkel Tripel Projection (Tissot indicatrix)
-
-```{r, echo = FALSE, fig.align='center', out.width="60%"}
-knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg/660px-Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
-```
-
----
-
-# And many more... (see [xkcd comic](https://xkcd.com/977/))
-
-```{r, echo = FALSE, fig.align='center', out.width="60%"}
-knitr::include_graphics("https://i.pinimg.com/originals/2d/03/cf/2d03cffa216afb23fa50fb07fc1221b1.jpg")
-```
-
-
----
-
-## Visualizing spatial data on maps using [`ggmap`](https://cran.r-project.org/web/packages/ggmap/readme/README.html)
+## Making scatterplots with `geom_point()`
 
 .pull-left[
 
-```{r us-map, eval = FALSE}
-library(ggmap)
-# First, we'll draw a "box" around the US
-# (in terms of latitude and longitude)
-US <- c(left = -125, bottom = 10, 
-        right = -67, top = 49)
-map <- get_stamenmap(US, zoom = 5, 
-                     maptype = "toner-lite")
 
-# Visualize the basic map
-ggmap(map) #<<
-
+```{r start-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm)) +
+  geom_point() #<<
 ```
 
-- Draw map based on lat / lon coordinates
+- Displaying the joint distribution
 
-- Put the box into `get_stamenmap()` to access [Stamen Maps](http://maps.stamen.com/#terrain/12/37.7706/-122.3782)
-
-- Draw the map using `ggmap()` to serve as base
+- What is the __obvious flaw__ with this plot?
 
 ]
 
 .pull-right[
-```{r ref.label="us-map", echo = FALSE, fig.height=7}
 
+```{r ref.label="start-plot", echo = FALSE, fig.height=7}
 ```
 
 ]
 
----
-
-# Three main types of spatial data
-
-
-1. __Point Pattern Data__: lat-long coordinates where events have occurred
-
-2. __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates.
-
-3. __Areal Data__: Geographic regions with one or more variables associated with those regions.
-
---
-
-- Each type is structured differently within a dataset
-
-- Each type requires a different kind of graph(s)
 
 ---
 
-# Point-Pattern data
-
-- __Point Pattern Data__: lat-long coordinates where events have occurred
-
-- __Point pattern data simply records the lat-long of events__; thus, there are only two columns
-
-- Again, latitude and longitude are represented with dots, sometimes called a dot or bubble map.
-
---
-
-- The goal is to understand how the __density__ of events varies across space
-
-- The density of the dots can also be visualized (e.g., with contours)
-
-  - __Use methods we've discussed before for visualizing 2D joint distribution__
-
-
----
-
-# Point-Referenced data
-
-- __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates
-
-- Point-referenced data will have the following form:
-
-```{r}
-airports %>% dplyr::select(lat, lon, altitude, n_depart, n_arrive, name) %>% slice(1:3)
-```
-
---
-
-- The goal is to understand how the variable(s) (e.g., `altitude`) vary across different spatial locations
-
-- Typically, the latitude and longitude are represented with dots, and the variable(s) are represented with size and/or colors
-
----
-
-## Adding points to the map as usual
+## Making scatterplots: ALWAYS adjust the `alpha`
 
 .pull-left[
 
-```{r airport-points, eval = FALSE}
-ggmap(map) +
-  geom_point(data = airports, #<<
-             aes(x = lon, y = lat),
-             alpha = 0.25)
+
+```{r alpha-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm)) +
+  geom_point(alpha = 0.5) #<<
 ```
 
-- Display locations of airports using `geom_point()` layer, need to specify `data` for layer
+- Adjust the transparency of points via `alpha` to __visualize overlap__ 
 
-- Currently viewing __point-pattern__ data 
+- Provides better understanding of joint frequency
 
-]
+- Especially important with larger datasets
 
-.pull-right[
-```{r ref.label="airport-points", echo = FALSE, fig.height=7}
-
-```
-
-]
-
-
----
-
-## Altering points on the map (in the usual way)
-
-.pull-left[
-
-```{r airport-points-plus, eval = FALSE}
-ggmap(map) +
-  geom_point(data = airports, 
-             aes(x = lon, y = lat, 
-                 size = sqrt(n_depart), #<<
-                 color = sqrt(n_arrive)), #<<
-             alpha = .5) +
-  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
-                  labels = c(1, 5, 10, 50, 100, 500), 
-                  name = "# departures") +
-  scale_color_distiller(palette = "Spectral") +
-  labs(color = "sqrt(# arrivals)") +
-  theme(legend.position = "bottom")
-```
-
-
-- Displaying additional variables through `aes`
 
 
 ]
 
 .pull-right[
-```{r ref.label="airport-points-plus", echo = FALSE, fig.height=7}
 
+```{r ref.label="alpha-plot", echo = FALSE, fig.height=7}
 ```
 
 ]
 
 ---
 
-## Thinking about areal data
+## Making scatterplots: map categorical variable to `color`
 
-- __Areal Data__: Geographic regions associated with one or more variables specific to those regions
 
-- Areal data will have the following form (example US states data from 1970s):
-
-```{r, echo = FALSE}
-library(datasets)
-state_names <- rownames(state.x77)
-state_data <- as_tibble(state.x77)
-state_data <- state_data %>%
-  mutate(state = state_names) %>%
-  mutate(state = tolower(state))
+```{r, fig.align='center', fig.height=3}
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     color = species)) + #<<
+  geom_point(alpha = 0.5) 
 ```
 
-```{r}
-state_data %>% dplyr::slice(1:3)
+---
+
+## Making scatterplots: map continuous variable to `color`
+
+
+```{r, fig.align='center', fig.height=3}
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     color = body_mass_g)) + #<<
+  geom_point(alpha = 0.5) 
 ```
 
+
+---
+
+## Making scatterplots: map continuous variable to `color`
+
+
+```{r, fig.align='center', fig.height=3}
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     color = body_mass_g)) +
+  geom_point(alpha = 0.5) +
+  scale_color_gradient(low = "darkblue", high = "darkorange") #<<
+```
+
+
+---
+
+## Making scatterplots: map continuous variable to `size`
+
+
+```{r, fig.align='center', fig.height=3}
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     size = body_mass_g)) + #<<
+  geom_point(alpha = 0.5) 
+```
+
+---
+
+## Making scatterplots: map categorical variable to `shape`
+
+
+```{r, fig.align='center', fig.height=3}
+ggplot(penguins, aes(x = bill_depth_mm, y = bill_length_mm,
+                     shape = species)) + #<<
+  geom_point(alpha = 0.5) 
+```
+
+
+---
+
+## Making scatterplots: ALL AT ONCE!
+
+
+.pull-left[
+```{r all-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = bill_depth_mm, 
+             y = bill_length_mm,
+             color = species, #<<
+             shape = island, #<< 
+             size = body_mass_g)) + #<<
+  geom_point(alpha = 0.5) 
+```
+
+- 5 dimensions at once!
+
+- But we should be careful about this...
+
+]
+.pull-right[
+```{r, ref.label='all-plot', echo = FALSE, fig.height = 7}
+
+```
+
+]
+
+
+
+---
+
+```{r, echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://images.squarespace-cdn.com/content/v1/5ce45e9df03bfe000172d138/1597870238202-3OWP5306LOI8P2HP02EN/Jeff+Goldblum+Your+Scientists+Were+so+preoccupied+with+whether+or+not+they+could+they+didn%27t+stop+to+think+if+they+should.jpg")
+```
+
+
+---
+
+## Displaying trend lines: linear regression
+
+.pull-left[
+
+```{r line-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+  geom_smooth(method = "lm") #<<
+```
+
+- Displays `body_mass_g ~ flipper_length_mm` regression line
+
+- Adds 95% confidence intervals by default
+
+- Estimating the __conditional expectation__ of `body_mass_g` | `flipper_length_mm`, 
+
+  - i.e., $\mathbb{E}[Y | X]$
+
+
+]
+.pull-right[
+
+```{r ref.label="line-plot", echo = FALSE, fig.height=7}
+
+```
+
+
+]
+
+---
+
+## Setup and motivation for linear regression
+
+Consider an outcome $Y \in \mathbb{R}$ and covariate $X \in \mathbb{R}$
+
+  + We have $n$ observations: $(X_1, Y_1), \dots, (X_n, Y_n)$
+  
+Purpose of regression is to model $\mathbb{E}[Y | X]$
 
 --
 
-- Need to match the region with the actual geographic boundaries
+Consider the case where $X$ takes on discrete values $c_1, \dots, c_k$
 
-- Many geographic boundaries/features are stored as "shapefiles"
+Then most straightforward way to estimate $\mathbb{E}[Y | X = c_j]$ is to use the sample mean for subgroup $X_i = c_j$:
 
-  - i.e., complicated polygons
-  
-- Can contain the lines, points, etc. to represent any geographic feature
+$$\hat{\mathbb{E}}[Y|X = c_j] = \frac{1}{N_j} \sum_{i: X_i = c_j} Y_i$$
 
-- Shapefiles are readily available for countries, states, counties, etc.
++ Graphs like side-by-side violin plots, facetted histograms, and overlaid density plots essentially compare $\hat{\mathbb{E}}[Y|X = c_j]$ for different categories
 
+But when $X$ is quantitative, what do we do?
+
++ Use statistical model to "guess" what $\mathbb{E}[Y|X = x]$ is, even when we don't observe $X = x$
 
 ---
 
-## Access shapefiles using `map_data()` 
+## Statistical Model for Linear Regression
 
-.pull-left[
+Linear regression assumes $Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)$
 
-```{r}
-library(maps)
-state_borders <- map_data("state") 
-head(state_borders)
-```
+- $\beta_0$: _intercept_ - population mean outcome when $X = 0$; i.e., $\mathbb{E}[Y | X = 0]$
 
-- For example: `map_data("world")`, `map_data("state")`, `map_data("county")` (need to install [`maps` package](https://cran.r-project.org/web/packages/maps/maps.pdf))
+- $\beta_1$: _slope_ - population mean _change_ in $Y$ when $X$ increases by 1
 
-- Contains lat/lon coordinates to draw geographic boundaries
-
-]
+- $\beta_0$ and $\beta_1$ are parameters that must be estimated
 
 --
 
+The assumptions baked into this model are:
+
+1. Normality
+
+2. Equal variance
+
+3. Independent errors
+
+4. Linearity
+
+5. Fixed $X$
+
+
+---
+
+## Assessing assumptions of linear regression
+
+Linear regression assumes $Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)$
+
+- If this is true, then $Y_i - \hat{Y}_i \overset{iid}{\sim} N(0, \sigma^2)$
+
+--
+
+Plot residuals against $\hat{Y}_i$, __residuals vs fit__ plot
+
+- Used to assess linearity, any divergence from mean 0
+
+- Used to assess equal variance, i.e., if $\sigma^2$ is homogenous across predictions/fits $\hat{Y}_i$
+
+--
+
+More difficult to assess the independence and fixed $X$ assumptions
+
+- Make these assumptions based on subject-matter knowledge
+
+---
+
+## Residual vs fit plots
+
+.pull-left[
+
+```{r resid-plot, eval = FALSE}
+lin_reg <- 
+  lm(body_mass_g ~ flipper_length_mm, #<<
+     data = penguins)
+
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %>%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, #<<
+             linetype = "dashed", #<<
+             color = "red")
+```
+
+Two things to look for:
+
+1. Any trend around horizontal reference line?
+
+2. Equal vertical spread?
+
+]
+
 .pull-right[
 
-- Typical workflow for plotting areal data (e.g., using states):
+```{r ref.label="resid-plot", echo = FALSE, fig.height=7}
 
-  - Get state-specific data
-  
-  - Get state boundaries
-  
-  - Merge state-specific data with state boundaries (using `left_join()`)
-  
-```{r}
-state_plot_data <- state_borders %>%
-  left_join(state_data, #<<
-            by = c("region" = "state")) #<<
 ```
-  
-  
-  - Then plot the data
+
 
 ]
 
 ---
 
-## Create a choropleth map with `geom_polygon()`
+## Residual vs fit plots
 
 .pull-left[
 
-```{r choropleth, eval = FALSE}
-state_plot_data %>%
-  ggplot() + 
-  geom_polygon(aes(x = long, y = lat, #<<
-                   group = group, #<<
-                   fill = Illiteracy), #<<
-               color = "black") + #<<
-  scale_fill_gradient2(
-    low = "darkgreen",
-    mid = "lightgrey", 
-    high = "darkorchid4",
-    midpoint = 0.95) +
-  theme_void() +
-  coord_map("polyconic") + #<<
-  labs(fill = "Illiteracy %") + 
-  theme(legend.position = "bottom")
+```{r resid-upd-plot, eval = FALSE}
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %>%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, 
+             linetype = "dashed",
+             color = "red") +
+  geom_smooth() #<<
 ```
 
+Two things to look for:
+
+1. Any trend around horizontal reference line? 
+
+  - add `geom_smooth` to highlight this
+
+2. Equal vertical spread?
 
 ]
+
 .pull-right[
-```{r ref.label="choropleth", fig.height=7, echo = FALSE}
+
+```{r ref.label="resid-upd-plot", echo = FALSE, fig.height=7}
 
 ```
+
 
 ]
 
 ---
 
-## Uniform size with [`statebins`](https://github.com/hrbrmstr/statebins)
+## Examples of Residual-vs-Fit Plots
 
-.pull-left[
 
-```{r bin-map, eval = FALSE}
-library(statebins)
-state_data$new_state <- 
-  str_to_title(state_data$state)
-statebins(state_data = state_data, #<<
-          state_col = "new_state",
-          value_col = "Illiteracy") +
-  theme_statebins()
 
-```
+---
 
-- Make all states equal in size
+## Main Takeaways
 
-- Keeps spatial arrangement but focus is on the variable of interest displayed by the color
+#### Scatterplots are the most common visual for 2D quantitative variables
 
-]
++ Many ways to incorporate additional dimensions in scatterplots, e.g., color and shape
 
-.pull-right[
-```{r ref.label="bin-map", echo = FALSE, fig.height=7}
++ Allows you to assess if the relationship between $X_1$ and $X_2$ depends on other variables
 
-```
+Linear regression is by far the most common model for describing the relationship between 2+ quantitative variables
 
-]
++ Can also transform the outcome
 
++ Can also transform the covariates
+
++ Can also do nonparametric "smoothing"
+
+#### Use graphs to assess linear regression assumptions
 
 ---
 class: center, middle
 
-# Next time: Visualizing text data
+# Next time: Inference with Linear Regression
 
-__HW5 due Wednesday! Graphics Critique / Replication #2 due Friday Oct 7th!__ 
+Reminder: __HW4 due Wednesday!__  __Graphics critique due Feb 28th!__
 
 Recommended reading: 
 
-[CW Chapter 15 Visualizing geospatial data](https://clauswilke.com/dataviz/geospatial-data.html)
-
-[KH Chapter 7 Draw Maps](https://socviz.co/maps.html#maps)
-
+[CW Chapter 12 Visualizing associations among two or more quantitative variables](https://clauswilke.com/dataviz/visualizing-associations.html)
 
 
