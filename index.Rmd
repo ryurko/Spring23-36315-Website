@@ -33,6 +33,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 8       | Graphical Inference for 1D Quantitative Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec8#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec8.Rmd) |
 | 9       | Comparing Distributions and Statistical Power | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec9#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec9.Rmd) |
 | 10      | 2D Quantitative Data: Scatterplots and Linear Regression | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec10#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec10.Rmd) |
+| 11      | Inference with Linear Regression | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec11#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec11.Rmd) |
 
 
 
@@ -44,6 +45,7 @@ Additional `R` demos are available below in html format.
 |-------|--------------------|--------|-----------|
 | 1     | Into the tidyverse | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Demo1.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Demo1.Rmd) |
 | 2     | Lecture 10 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture10_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture10_R_Demo.Rmd) |
+| 3     | Lecture 11 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture11_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture11_R_Demo.Rmd) |
 
 ## Resources
 

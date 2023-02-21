@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "Visualizing Text Data"  
+title: "36-315 Lecture 11"
+subtitle: "Inference with Linear Regression"  
 author: 
   - "Professor Ron Yurko"
-date: '10/5/2022'
+date: '2/22/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -28,7 +28,7 @@ knitr::opts_chunk$set(
   hiline = TRUE,
   fig.path = "figs/Lec11/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,163 +36,130 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
-## Working with raw text data 
 
-- We'll work with script from the best episode of ['The Office': Season 4, Episode 13 - 'Dinner Party'](https://en.wikipedia.org/wiki/Dinner_Party_(The_Office))
-
-- We can access the script using the [`schrute` package (yes this is a real thing)](https://cran.r-project.org/web/packages/schrute/vignettes/theoffice.html):
-
-```{r}
+```{r, include = FALSE}
 library(tidyverse)
-library(schrute)
-
-# Create a table from this package just corresponding to the Dinner Party episode:
-dinner_party_table <- theoffice %>%
-  filter(season == 4, episode == 13) %>%
-  # Just select columns of interest:
-  dplyr::select(index, character, text)
-head(dinner_party_table)
+library(palmerpenguins)
 ```
 
----
-
-## Bag of Words representation of text
-
-- Most common way to store text data is with a __document-term matrix__ (DTM):
-
-|            | Word 1   | Word 2   | $\dots$  | Word $J$ |
-| ---------- | -------- | -------- | -------- | -------- |
-| Document 1 | $w_{11}$ | $w_{12}$ | $\dots$  | $w_{1J}$ |
-| Document 2 | $w_{21}$ | $w_{22}$ | $\dots$  | $w_{2J}$ |
-| $\dots$    | $\dots$  | $\dots$  | $\dots$  | $\dots$  |
-| Document N | $w_{N1}$ | $w_{N2}$ | $\dots$  | $w_{NJ}$ |
-
-- $w_{ij}$: count of word $j$ in document $i$, aka _term frequencies_
-
---
-
-Two additional ways to reduce number of columns:
-
-1. __Stop words__: remove extremely common words (e.g., of, the, a)
-
-2. __Stemming__: Reduce all words to their "stem"
-
-  - For example: Reducing = reduc. Reduce = reduc. Reduces = reduc.
-
-Easy to convert text into DTM format using [`tidytext` package](https://cran.r-project.org/web/packages/tidytext/vignettes/tidytext.html)
-
----
-
-## Tokenize text into long format
-
-- Convert raw text into long, tidy table with one-token-per-document-per-row
-
-  - A __token__ equals a unit of text - typically a word
-  
-```{r}
-library(tidytext)
-tidy_dinner_party_tokens <- dinner_party_table %>%
-  unnest_tokens(word, text) #<<
-# View the first so many rows:
-head(tidy_dinner_party_tokens)
-```
-
-
----
-
-## Remove stop words and apply stemming
+## Displaying trend lines: linear regression
 
 .pull-left[
 
-- Load `stop_words` from `tidytext`
-
-```{r}
-data(stop_words)
-
-tidy_dinner_party_tokens <- tidy_dinner_party_tokens %>%
-  filter(!(word %in% stop_words$word)) #<<
-
-head(tidy_dinner_party_tokens)
+```{r line-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+  geom_smooth(method = "lm") #<<
 ```
 
+- Displays `body_mass_g ~ flipper_length_mm` regression line
+
+- Adds 95% confidence intervals by default
+
+- Estimating the __conditional expectation__ of `body_mass_g` | `flipper_length_mm`, 
+
+  - i.e., $\mathbb{E}[Y | X]$
+
+
 ]
-
---
-
 .pull-right[
 
-- Use [`SnowballC` package](https://cran.r-project.org/web/packages/SnowballC/SnowballC.pdf) to perform stemming
+```{r ref.label="line-plot", echo = FALSE, fig.height=7}
 
-```{r}
-library(SnowballC)
-
-tidy_dinner_party_tokens <- tidy_dinner_party_tokens %>%
-  mutate(stem = wordStem(word)) #<<
-
-head(tidy_dinner_party_tokens)
 ```
+
 
 ]
 
+
+
 ---
 
-## Create word cloud using term frequencies
+## Statistical Model for Linear Regression
 
-__Word Cloud__: Displays all words mentioned across documents, where more common words are larger
+Linear regression assumes $Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)$
 
-- To do this, you must compute the _total_ word counts:
+- $\beta_0$: _intercept_ - population mean outcome when $X = 0$; i.e., $\mathbb{E}[Y | X = 0]$
 
-$$w_{\cdot 1} = \sum_{i=1}^N w_{i1} \hspace{0.1in} \dots \hspace{0.1in} w_{\cdot J} = \sum_{i=1}^N w_{iJ}$$
+- $\beta_1$: _slope_ - population mean _change_ in $Y$ when $X$ increases by 1
 
-- Then, the size of Word $j$ is proportional to $w_{\cdot j}$
+- $\beta_0$ and $\beta_1$ are parameters that must be estimated
 
 --
 
-Create word clouds in `R` using [`wordcloud` package](https://cran.r-project.org/web/packages/wordcloud/wordcloud.pdf)
+The assumptions baked into this model are:
 
-Takes in two main arguments to create word clouds:
+1. Normality
 
-1. `words`: vector of unique words
+2. Equal variance
 
-2. `freq`: vector of frequencies
+3. Independent errors
+
+4. Linearity
+
+5. Fixed $X$
 
 
 ---
 
-## Create word cloud using term frequencies
+## Assessing assumptions of linear regression
+
+Linear regression assumes $Y_i \overset{iid}{\sim} N(\beta_0 + \beta_1 X_i, \sigma^2)$
+
+- If this is true, then $Y_i - \hat{Y}_i \overset{iid}{\sim} N(0, \sigma^2)$
+
+--
+
+Plot residuals against $\hat{Y}_i$, __residuals vs fit__ plot
+
+- Used to assess linearity, any divergence from mean 0
+
+- Used to assess equal variance, i.e., if $\sigma^2$ is homogenous across predictions/fits $\hat{Y}_i$
+
+--
+
+More difficult to assess the independence and fixed $X$ assumptions
+
+- Make these assumptions based on subject-matter knowledge
+
+---
+
+## Residual vs fit plots
 
 .pull-left[
 
-```{r wordcloud, eval = FALSE}
-token_summary <- tidy_dinner_party_tokens %>%
-  group_by(stem) %>%
-  count() %>%
-  ungroup() 
+```{r resid-plot, eval = FALSE}
+lin_reg <- 
+  lm(body_mass_g ~ flipper_length_mm, #<<
+     data = penguins)
 
-library(wordcloud)
-wordcloud(words = token_summary$stem, #<<
-          freq = token_summary$n, #<<
-          random.order = FALSE, #<<
-          max.words = 100, 
-          colors = brewer.pal(8, "Dark2"))
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %>%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, #<<
+             linetype = "dashed", #<<
+             color = "red")
 ```
 
-- Set `random.order = FALSE` to place biggest words in center
+Two things to look for:
 
-- Can customize to display limited # words (`max.words`)
+1. Any trend around horizontal reference line?
 
-- Other options as well like `colors`
+2. Equal vertical spread?
 
 ]
 
 .pull-right[
 
-```{r ref.label="wordcloud", fig.width=4, echo = FALSE}
+```{r ref.label="resid-plot", echo = FALSE, fig.height=7}
 
 ```
 
@@ -201,228 +168,363 @@ wordcloud(words = token_summary$stem, #<<
 
 ---
 
-## TF-IDF weighting
-
-- We saw that `michael` was the largest word, but what if I'm interested in comparing text across characters (i.e., documents)?
-
---
-
-- It’s arguably of more interest to understand which words are frequently used in one set of texts but not the other, i.e., which words are unique?
-
-- Many text analytics methods will __down-weight__ words that occur frequently across all documents
-
---
-
-- __Inverse document frequency (IDF)__: for word $j$ we compute $\text{idf}_j = \log \frac{N}{N_j}$
-
-  - where $N$ is number of documents, $N_j$ is number of documents with word $j$
-  
---
-
-- Compute __TF-IDF__ $= w_{ij} \times \text{idf}_j$
-
----
-
-## TF-IDF example with characters
-
-Compute and join TF-IDF using `bind_tf_idf()`:
-
-```{r}
-character_token_summary <- tidy_dinner_party_tokens %>%
-  group_by(character, stem) %>% #<<
-  count() %>%
-  ungroup() 
-
-character_token_summary <- character_token_summary %>%
-  bind_tf_idf(stem, character, n) #<<
-character_token_summary
-```
-
-
----
-
-## Top 10 words by TF-IDF for each character
+## Residual vs fit plots
 
 .pull-left[
 
-```{r tfidf-plot, eval = FALSE}
-character_token_summary %>%
-  filter(character %in% c("Michael", "Jan", "Jim", "Pam")) %>%
-  group_by(character) %>%
-  slice_max(tf_idf, n = 10, with_ties = FALSE) %>% #<<
-  ungroup() %>%
-  mutate(stem = reorder_within(stem, tf_idf, #<<
-                               character)) %>% #<<
-  ggplot(aes(y = tf_idf, x = stem),
-         fill = "darkblue", alpha = 0.5) +
-  geom_col() +
-  coord_flip() +
-  scale_x_reordered() +
-  facet_wrap(~ character, ncol = 2, 
-             scales = "free") + #<<
-  labs(y = "TF-IDF", x = NULL)
+```{r resid-upd-plot, eval = FALSE}
+tibble(fits = fitted(lin_reg), 
+       residuals = residuals(lin_reg)) %>%
+  ggplot(aes(x = fits, y = residuals)) +
+  geom_point(alpha = 0.5) +
+  geom_hline(yintercept = 0, 
+             linetype = "dashed",
+             color = "red") +
+  geom_smooth() #<<
 ```
 
-- Bars can be simpler for comparison than several word clouds, to focus on top words
+Two things to look for:
+
+1. Any trend around horizontal reference line? 
+
+  - add `geom_smooth` to highlight this
+
+2. Equal vertical spread?
 
 ]
 
 .pull-right[
-```{r ref.label="tfidf-plot", echo = FALSE, fig.width=4}
+
+```{r ref.label="resid-upd-plot", echo = FALSE, fig.height=7}
 
 ```
+
 
 ]
 
 ---
 
-## Sentiment Analysis
+## Examples of Residual-vs-Fit Plots
 
-- The visualizations so far only look at word _frequency_ (possibly weighted with TF-IDF)
 
-  - Doesn't tell you _how_ words are used
-  
---
-
-- A common goal in text analysis is to try to understand the overall __sentiment__ or "feeling" of text, i.e., __sentiment analysis__
-
-- Typical approach:
-
-  1.  Find a sentiment dictionary (e.g., "positive" and "negative" words)
-  
-  2. Count the number of words belonging to each sentiment
-  
-  3. Using the counts, you can compute an "average sentiment" (e.g., positive counts - negative counts)
-  
---
-
-- This is called a __dictionary-based approach__
-
-- There are many sentiment dictionaries already available
-
-- The __Bing__ dictionary (named after Bing Liu) provides 6,786 words that are either "positive" or "negative"
 
 ---
 
-## Character sentiment analysis
+## More fun with `penguins`...
 
-.pull-left[
+Lecture 11 Demo: Walk through an example of plotting/running different linear regression models
+
++ __Outcome__: bill depth (in mm)
+
++ __Covariates__: bill length (depth) and species 
+
+Linear regression models we will consider:
+
+1. `bill_depth_mm` ~ `bill_length_mm`
+
+2. `bill_depth_mm` ~ `bill_length_mm` + `species`
+
+3. `bill_depth_mm` ~ `bill_length_mm` + `species` + `bill_length_mm` $\times$ `species`
+
+
+---
+
+## Model #1: 
+### `bill_depth_mm` ~ `bill_length_mm`
+
+```{r, echo = FALSE, fig.align='center'}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE)
+```
+
+---
 
 ```{r}
-get_sentiments("bing")
+summary(lm(bill_depth_mm ~ bill_length_mm, data = penguins))
 ```
 
 
-]
+---
+
+## How are the intercept and slope estimated?
+
+We have data $(X_i, Y_i)$. Want to estimate $\beta_0$ and $\beta_1$, where $\mathbb{E}[Y | X] = \beta_0 + \beta_1 X$
+
+If we had $\hat{\beta}_0$ and $\hat{\beta}_1$, then $\hat{Y}_i = \hat{\beta}_0 + \hat{\beta}_1 X_i$
 
 --
 
-.pull-right[
+The estimates $\hat{\beta}_0$ and $\hat{\beta}_1$ are obtained by solving
 
-Join sentiment to token table (without stemming)
+$$\arg \min_{\beta_0,\beta_1} \sum_{i=1}^n (Y_i - \beta_0 - \beta_1 X_i)^2$$
+
+- Remember that $\hat{Y}_i = \hat{\beta}_0 + \hat{\beta}_1 X_i$, so the above is saying: "_Give me the $\hat{Y}_i$ such that $(Y_i - \hat{Y}_i)^2$ is minimized, on average_"
+
+
+The estimates $\hat{\beta}_0$ and $\hat{\beta}_1$ are:
+
+$$\hat{\beta}_1 = \frac{\sum_{i=1}^n (X_i - \bar{X})(Y_i - \bar{Y})}{\sum_{i=1}^n (X_i - \bar{X})^2} = \frac{\text{Cov}(X,Y)}{\text{Var}(X)} \\
+            \hat{\beta}_0 = \bar{Y} - \hat{\beta}_1 \bar{X}$$
+
+
+
+---
+
+## Assessing the Fit of Linear Regression
+
+
+Intuitively, the more $X$ and $Y$ are correlated, the better the fit of the linear regression
+
+Correlation is defined as
+
+$$\rho = \frac{\sum_{i=1}^n (X_i - \bar{X})(Y_i - \bar{Y})}{\sqrt{\sum_{i=1}^n (X_i - \bar{X})^2 \cdot \sum_{i=1}^n (Y_i - \bar{Y})^2}} = \frac{\text{Cov}(X,Y)}{ \sqrt{\text{Var}(X) \cdot \text{Var}(Y)} }$$
+
+- Correlation is just a standardized covariance, where $-1 \leq \rho \leq 1$.
+
+- More generally, $R^2$ measures the fraction of variability in the outcome _accounted by_ the covariates:
+
+$$R^2 = 1 - \frac{\sum_{i=1}^n (Y_i - \hat{Y}_i)^2}{\sum_{i=1}^n (Y_i - \bar{Y})^2} = 1 - \frac{\text{SS}_{\text{residuals}}}{\text{SS}_{\text{total}}}$$
+
+The higher $R^2$, the more the association. When linear regression has one covariate, $R = \rho$
+
+---
+
+## Multiple Linear Regression
+
+Let's say we have a bunch of covariates $X_1,X_2,\dots,X_k$
+
+The statistical model for multiple linear regression is
+
+$$Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}, \sigma^2), \hspace{0.1in} \text{for all } i=1,\dots,n$$
+
+- Covariates can be quadratic, cubic, etc. forms of other covariates, so this is quite flexible
+
+--
+
+- How do we know when we've included the "right" covariates?
+
+- The higher $R^2$, the more the association. So, maximize $R^2$?
+
+- However, adding more covariates _always_ increases $R^2$. Better to look at "adjusted $R^2$", which accounts for this
+
+- Also common: AIC and BIC (smaller is better). More on this later in the semester.
+
+---
+
+## Special Case - Categorical Variables
+
+Can include categorical variables in multiple linear regression, but need to code them as "dummy variables" (i.e., indicator variables)
+
+Say a categorical variable has $k \geq 2$ levels. Need to create $(k-1)$ indicator variables, equal to 1 for _one_ category and 0 otherwise
+
+__Important__: Categorical variable may be coded numerically (e.g., Agree = 1, Disagree = -1, Not Sure = 0)
+
+- If you put this variable straight into `lm()`, it will fit a very different model!
+
+---
+
+## Understanding the Categorical Variables Example
+
+Example: Penguins species: _Adelie_, _Chinstrap_, _Gentoo._ There are $k = 3$ levels.
+
+Create an indicator for _Chinstrap_ and _Gentoo_: $I_C$ and $I_G$.  
+
+- If $I_C = I_G = 0$, then the penguin must be _Adelie_
+
+The statistical model would be $Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_C I_C + \beta_G I_G, \sigma^2)$
+
+--
+
+- $\beta_0$: Mean for _Adelie_
+
+- $\beta_0 + \beta_C$: Mean for _Chinstrap_
+
+- $\beta_0 + \beta_G$: Mean for _Gentoo_
+
+--
+
+- Significant $\beta_C$ $\rightarrow$ Chinstrap and Adelie are different
+
+- Significant $\beta_G$ $\rightarrow$ Gentoo and Adelie are different
+
+- How to compare Chinstrap and Gentoo? Need to fit a different model.
+
+---
+
+## Understanding Interactions (Categorical Example Again)
+
+Say we also have a quantitative variable $X$ (bill length). Consider two statistical models:
+
+1. $Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_X X + \beta_C I_C + \beta_G I_G, \sigma^2)$
+
+2. $Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_X X + \beta_C I_C + \beta_G I_G + \beta_{CX} I_C X + \beta_{GX} I_G X, \sigma^2)$
+
+--
+
+For Model 1...
+
+- The intercept for Adelie is $\beta_0$; for Chinstrap it is $\beta_0 + \beta_C$; for Gentoo it is $\beta_0 + \beta_G$
+
+- The slope for all species is $\beta_X$.
+
+--
+
+For Model 2...
+
+- The intercept for Adelie is $\beta_0$; for Chinstrap it is $\beta_0 + \beta_C$; for Gentoo it is $\beta_0 + \beta_G$.
+
+- The slope for Adelie is $\beta_X$; for Chinstrap it is $\beta_X + \beta_{CX}$; for Gentoo it is $\beta_X + \beta_{GX}$
+
+--
+
+Significant coefficient for categorical variables by themselves? Significantly different intercepts
+
+Significant coefficient for interactions with categorical variables? Significantly different slopes
+
+---
+
+## Model #2: 
+### `bill_depth_mm` ~ `bill_length_mm` + `species`
+
+```{r, echo = FALSE, fig.align='center'}
+depth_lm_species_add <- lm(bill_depth_mm ~ bill_length_mm + species,
+                           data = penguins)
+
+# Calculate species-specific intercepts in order:
+intercepts <- # First for `Adelie` it's just the initial intercept
+  c(coef(depth_lm_species_add)["(Intercept)"],
+    # Next for `Chinstrap` it's the intercept plus the `Chinstrap` term:
+    coef(depth_lm_species_add)["(Intercept)"] + 
+      coef(depth_lm_species_add)["speciesChinstrap"],
+    # And finally for `Gentoo` it's again the intercept plus the `Gentoo` term
+    coef(depth_lm_species_add)["(Intercept)"] + 
+      coef(depth_lm_species_add)["speciesGentoo"])
+
+# Create a small table to store the intercept, slopes, and species:
+lines_tbl <- tibble("intercepts" = intercepts,
+                    # Slopes are the same for each, thus use rep()
+                    "slopes" = rep(coef(depth_lm_species_add)["bill_length_mm"],
+                                   3),
+                    # And the levels of species:
+                    "species" = levels(penguins$species))
+penguins %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm)) +
+  geom_point(alpha = 0.5) +
+  geom_abline(data = lines_tbl,
+              aes(intercept = intercepts, slope = slopes,
+                  color = species)) +
+  labs(x = "Bill length (mm)", y = "Bill depth (mm)", 
+       title = "Bill depth versus weight by species")
+```
+
+---
 
 ```{r}
-tidy_all_tokens <- dinner_party_table %>%
-  unnest_tokens(word, text)
-
-tidy_sentiment_tokens <- tidy_all_tokens %>%
-  inner_join(get_sentiments("bing")) #<<
-
-head(tidy_sentiment_tokens)
+summary(lm(bill_depth_mm ~ bill_length_mm + species, data = penguins))
 ```
 
-
-
-]
 
 ---
 
-## Character sentiment analysis
+## Model #3: 
+### `bill_depth_mm` ~ `bill_length_mm` + `species` + `bill_length_mm` $\times$ `species`
 
-.pull-left[
-
-```{r sentiment-plot, eval = FALSE}
-tidy_sentiment_tokens %>%
-  group_by(character, sentiment) %>%
-  summarize(n_words = n()) %>%
-  ungroup() %>%
-  group_by(character) %>%
-  mutate(total_assigned_words = sum(n_words)) %>%
-  ungroup() %>%
-  mutate(character = 
-           fct_reorder(character, 
-                       total_assigned_words)) %>%
-  ggplot(aes(x = character, y = n_words, 
-             fill = sentiment)) + #<<
-  geom_bar(stat = "identity") +
-  coord_flip() +
-  scale_fill_manual(values = c("red", "blue")) +
-  theme_bw() +
-  theme(legend.position = "bottom")
+```{r, echo = FALSE, fig.align='center'}
+penguins %>%
+  ggplot(aes(x = bill_length_mm, y = bill_depth_mm, color = species)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "lm", se = TRUE) +
+  labs(x = "Bill length (mm)", y = "Bill depth (mm)", 
+       title = "Bill depth versus weight by species")
 ```
 
-
-]
-
-.pull-right[
-```{r ref.label = "sentiment-plot", fig.width=4, echo = FALSE}
-
-```
-
-]
 
 ---
 
-## Other functions of text
-
-- We've just focused on word counts - __but there are many functions of text__
-
-- For example: __number of unique words__ is often used to measure vocabulary
-
-```{r, out.width="70%", echo = FALSE, fig.align='center'}
-knitr::include_graphics("https://pbs.twimg.com/media/DxCgsrxWwAAOWO3.jpg")
+```{r}
+summary(lm(bill_depth_mm ~ bill_length_mm * species, data = penguins))
 ```
+
 
 ---
 
-# Main Takeaways
+## A Few Linear Regression Warnings
 
-- Text is arguably infinite-dimensional, and we need to (somehow) represent text with a finite number of dimensions
 
-- Most common representation: Bag of words and term frequencies (possibly weighted by TF-IDF)
+#### Simpson's Paradox
+
+- There is a negative linear relationship between two variables but a positive linear relationship within every subpopulation
+
+- In these cases, subgroup analysis is especially important
 
 --
 
-- Word clouds are the most common way to visualize the most frequent
-words in a set of documents
+#### Is the intercept meaningful?
 
-- TF-IDF weighting allows you to detect words that are uniquely used
-in certain documents
-
-- Common to plot the most "important words" of a set of documents,
-ordered by TF-IDF weights
+- Think about whether $X = 0$ makes scientific sense for a particular variable before you interpret the intercept
 
 --
 
-- Can also measure the "sentiment" of text with sentiment-based dictionaries
+#### Interpolation versus Extrapolation
 
-- Sentiment analyses are only as relevant as the dictionaries you use
+- Interpolation is defined as prediction within the range of a variable
+
+- Extrapolation is defined as prediction outside the range of a variable
+
+- Generally speaking, interpolation is more reliable than extrapolation. (Less sensitive to model misspecification.)
+
+
+---
+
+## Extrapolation Example
+
+```{r, echo = FALSE, fig.align='center'}
+set.seed(1389)
+fake_data <- tibble(x = runif(100, min = -10, max = -3)) %>%
+  mutate(y = rnorm(n = 100, mean = 3 * x^2, sd = 3))
+fake_data %>%
+  ggplot(aes(x, y)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  theme_bw()
+```
+
+---
+
+## Extrapolation Example
+
+```{r, echo = FALSE, fig.align='center'}
+fake_data %>%
+  ggplot(aes(x, y)) +
+  geom_point() +
+  scale_x_continuous(limits = c(-11, 11)) +
+  geom_smooth(method = "lm") +
+  theme_bw()
+```
+
+
+---
+
+## Extrapolation Example
+
+```{r, echo = FALSE, fig.align='center'}
+fake_data %>%
+  ggplot(aes(x, y)) +
+  geom_point() +
+  geom_smooth(method = "lm") +
+  scale_x_continuous(limits = c(-11, 11)) +
+  stat_function(
+    fun = function (x) 3 * x^2,
+    linetype = "dashed", color = "red") +
+  theme_bw()
+```
 
 ---
 class: center, middle
 
-# Next time: Dashboards
+# Next time: Midsemester Review
 
-__HW5 due today! Graphics Critique / Replication #2 due Friday Oct 7th!__ 
-
-Recommended reading: 
-
-[Text Mining With R](https://www.tidytextmining.com/)
-
-[Supervised Machine Learning for Text Analysis in R](https://smltar.com/)
-
-
-
-
-
+Reminder: __HW4 due tonight!__ __Graphics critique due Feb 28th!__
 
