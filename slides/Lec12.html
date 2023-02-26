@@ -1,15 +1,10 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>36-613: Data Visualization</title>
+    <title>36-315 Lecture 12</title>
     <meta charset="utf-8" />
     <meta name="author" content="Professor Ron Yurko" />
-    <meta name="date" content="2022-10-10" />
     <script src="libs/header-attrs/header-attrs.js"></script>
-    <script src="libs/fabric/fabric.min.js"></script>
-    <link href="libs/xaringanExtra-scribble/scribble.css" rel="stylesheet" />
-    <script src="libs/xaringanExtra-scribble/scribble.js"></script>
-    <script>document.addEventListener('DOMContentLoaded', function() { window.xeScribble = new Scribble({"pen_color":["#FF0000"],"pen_size":3,"eraser_size":30,"palette":[]}) })</script>
     <script src="libs/clipboard/clipboard.min.js"></script>
     <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
     <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
@@ -21,16 +16,16 @@
 class: center, middle, inverse, title-slide
 
 .title[
-# 36-613: Data Visualization
+# 36-315 Lecture 12
 ]
 .subtitle[
-## Trends and Animations
+## More Regression and Midsemester Review
 ]
 .author[
 ### Professor Ron Yurko
 ]
 .date[
-### 10/10/2022
+### 2/27/2023
 ]
 
 ---
@@ -41,414 +36,406 @@ class: center, middle, inverse, title-slide
 
 
 
-# Please fill out the FCE!
-
-#### Faculty course evaluations (FCEs) are out now
-
-#### I take feedback very seriously and I want the course to be useful!
-
-#### If you enjoyed this class, please fill out the FCE.
-
-#### If you didn’t enjoy this class, please fill out the FCE.
 
 
----
 
-## Longitudinal data and time series structure
+## More fun with `penguins`...
 
-- For now, consider a _single observation_ measured across time
+Lecture 11 Demo: Walk through an example of plotting/running different linear regression models
 
-- Time series data usually has the following structure:
++ __Outcome__: bill depth (in mm)
 
-| Variable   | `\(T_1\)`   | `\(T_2\)`   | `\(\dots\)`  | `\(T_J\)` |
-| ---------- | -------- | -------- | -------- | -------- |
-| `\(X_1\)` | `\(x_{11}\)` | `\(x_{12}\)` | `\(\dots\)`  | `\(x_{1J}\)` |
-| `\(X_2\)` | `\(x_{21}\)` | `\(x_{22}\)` | `\(\dots\)`  | `\(x_{2J}\)` |
-| `\(\vdots\)`    | `\(\vdots\)`  | `\(\vdots\)`  | `\(\dots\)`  | `\(\vdots\)`  |
-| `\(X_P\)` | `\(x_{P1}\)` | `\(x_{P2}\)` | `\(\dots\)`  | `\(x_{PJ}\)` |
++ __Covariates__: bill length (depth) and species 
 
---
+Linear regression models we will consider:
 
-- With `\(N\)` observations we have `\(N\)` of these matrices
+1. `bill_depth_mm` ~ `bill_length_mm`
 
---
+2. `bill_depth_mm` ~ `bill_length_mm` + `species`
 
-- Time may consist of regularly spaced intervals
-
-  - For example, `\(T_1 = t\)`, `\(T_2 = t + h\)`, `\(T_3 = t + 2h\)`, etc.
-  
-- It could also consist of irregularly spaced intervals. Then have to work with the raw `\(T_1,T_2,...\)`
+3. `bill_depth_mm` ~ `bill_length_mm` + `species` + `bill_length_mm` `\(\times\)` `species`
 
 
 ---
 
-## Demo example: Statistics PhDs by year
-
-
-
-.pull-left[
-
-
-```r
-stat_phd_year_summary %&gt;%
-  ggplot(aes(x = year, y = n_phds)) +
-  geom_point() +
-  scale_x_continuous(
-*   breaks = unique(stat_phd_year_summary$year),
-*   labels = unique(stat_phd_year_summary$year)) +
-  theme_bw() +
-  labs(x = "Year", y = "Number of PhDs",
-       title = "Number of Statistics-related PhDs awarded over time")
-```
-
-- Typical scatterplot display with `n_phds` on the y-axis and `year` on the x-axis:
-
-- Manually set x-axis breaks to show every year 
-
-]
-.pull-right[
+## Model #1: 
+### `bill_depth_mm` ~ `bill_length_mm`
 
 &lt;img src="figs/Lec12/unnamed-chunk-2-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
 
-]
+---
+
+## Special Case - Categorical Variables
+
+Can include categorical variables in multiple linear regression, but need to code them as "dummy variables" (i.e., indicator variables)
+
+Say a categorical variable has `\(k \geq 2\)` levels. Need to create `\((k-1)\)` indicator variables, equal to 1 for _one_ category and 0 otherwise
+
+__Important__: Categorical variable may be coded numerically (e.g., Agree = 1, Disagree = -1, Not Sure = 0)
+
+- If you put this variable straight into `lm()`, it will fit a very different model!
 
 ---
 
-## Add lines to emphasize order
+## Understanding the Categorical Variables Example
 
-.pull-left[
+Example: Penguins species: _Adelie_, _Chinstrap_, _Gentoo._ There are `\(k = 3\)` levels.
 
-```r
-stat_phd_year_summary %&gt;%
-  ggplot(aes(x = year, y = n_phds)) +
-  geom_point() +
-* geom_line() +
-  scale_x_continuous(
-    breaks = unique(stat_phd_year_summary$year),
-    labels = unique(stat_phd_year_summary$year)) +
-  theme_bw() +
-  labs(x = "Year", y = "Number of PhDs",
-       title = "Number of Statistics-related PhDs awarded over time")
-```
+Create an indicator for _Chinstrap_ and _Gentoo_: `\(I_C\)` and `\(I_G\)`.  
 
+- If `\(I_C = I_G = 0\)`, then the penguin must be _Adelie_
 
-]
-.pull-right[
+The statistical model would be `\(Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_C I_C + \beta_G I_G, \sigma^2)\)`
+
+--
+
+- `\(\beta_0\)`: Mean for _Adelie_
+
+- `\(\beta_0 + \beta_C\)`: Mean for _Chinstrap_
+
+- `\(\beta_0 + \beta_G\)`: Mean for _Gentoo_
+
+--
+
+- Significant `\(\beta_C\)` `\(\rightarrow\)` Chinstrap and Adelie are different
+
+- Significant `\(\beta_G\)` `\(\rightarrow\)` Gentoo and Adelie are different
+
+- How to compare Chinstrap and Gentoo? Need to fit a different model.
+
+---
+
+## Understanding Interactions (Categorical Example Again)
+
+Say we also have a quantitative variable `\(X\)` (bill length). Consider two statistical models:
+
+1. `\(Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_X X + \beta_C I_C + \beta_G I_G, \sigma^2)\)`
+
+2. `\(Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_X X + \beta_C I_C + \beta_G I_G + \beta_{CX} I_C X + \beta_{GX} I_G X, \sigma^2)\)`
+
+--
+
+For Model 1...
+
+- The intercept for Adelie is `\(\beta_0\)`; for Chinstrap it is `\(\beta_0 + \beta_C\)`; for Gentoo it is `\(\beta_0 + \beta_G\)`
+
+- The slope for all species is `\(\beta_X\)`.
+
+--
+
+For Model 2...
+
+- The intercept for Adelie is `\(\beta_0\)`; for Chinstrap it is `\(\beta_0 + \beta_C\)`; for Gentoo it is `\(\beta_0 + \beta_G\)`.
+
+- The slope for Adelie is `\(\beta_X\)`; for Chinstrap it is `\(\beta_X + \beta_{CX}\)`; for Gentoo it is `\(\beta_X + \beta_{GX}\)`
+
+--
+
+Significant coefficient for categorical variables by themselves? Significantly different intercepts
+
+Significant coefficient for interactions with categorical variables? Significantly different slopes
+
+---
+
+## Model #2: 
+### `bill_depth_mm` ~ `bill_length_mm` + `species`
 
 &lt;img src="figs/Lec12/unnamed-chunk-3-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
-
-]
-
 ---
 
-## Drop points to emphasize trends
-
-&lt;img src="figs/Lec12/only-line-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-
-
----
-
-## Can fill the area under the line
-
-.pull-left[
 
 ```r
-stat_phd_year_summary %&gt;%
-  ggplot(aes(x = year, y = n_phds)) +
-* geom_area(fill = "darkblue", alpha = 0.5) +
-  geom_line() +
-  scale_x_continuous(
-    breaks = unique(stat_phd_year_summary$year),
-    labels = unique(stat_phd_year_summary$year)) +
-  theme_bw() +
-  labs(x = "Year", y = "Number of PhDs",
-       title = "Number of Statistics-related PhDs awarded over time")
+summary(lm(bill_depth_mm ~ bill_length_mm + species, data = penguins))
 ```
 
-- __Only appropriate when the y-axis starts at 0!__
+```
+## 
+## Call:
+## lm(formula = bill_depth_mm ~ bill_length_mm + species, data = penguins)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -2.4529 -0.6864 -0.0508  0.5519  3.5915 
+## 
+## Coefficients:
+##                  Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)      10.59218    0.68302  15.508  &lt; 2e-16 ***
+## bill_length_mm    0.19989    0.01749  11.427  &lt; 2e-16 ***
+## speciesChinstrap -1.93319    0.22416  -8.624 2.55e-16 ***
+## speciesGentoo    -5.10602    0.19142 -26.674  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.9533 on 338 degrees of freedom
+##   (2 observations deleted due to missingness)
+## Multiple R-squared:  0.769,	Adjusted R-squared:  0.7669 
+## F-statistic: 375.1 on 3 and 338 DF,  p-value: &lt; 2.2e-16
+```
 
-  - It changes the y-axis by default to start at 0
-
-- Also a redundant use of ink...
-
-
-]
-.pull-right[
-
-&lt;img src="figs/Lec12/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-
-]
 
 ---
 
-## Plotting several time series - do NOT only use points
-
-
-.pull-left[
-
-```r
-stats_phds %&gt;%
-  ggplot(aes(x = year, y = n_phds, 
-*            color = field)) +
-  geom_point() +
-  scale_x_continuous(breaks = unique(stat_phd_year_summary$year),
-                     labels = unique(stat_phd_year_summary$year)) +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        legend.text = element_text(size = 7)) +
-  labs(x = "Year", y = "Number of PhDs",
-       title = "Number of Statistics-related PhDs awarded over time",
-       color = "Field")
-```
-
-- __We should NOT display multiple time series with just points!__
-
-
-]
-.pull-right[
+## Model #3: 
+### `bill_depth_mm` ~ `bill_length_mm` + `species` + `bill_length_mm` `\(\times\)` `species`
 
 &lt;img src="figs/Lec12/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
-]
 
 ---
 
-## Plotting several time series - use lines!
-
-
-.pull-left[
 
 ```r
-stats_phds %&gt;%
-  ggplot(aes(x = year, y = n_phds, 
-*            color = field)) +
-* geom_line() +
-  scale_x_continuous(breaks = unique(stat_phd_year_summary$year),
-                     labels = unique(stat_phd_year_summary$year)) +
-  theme_bw() +
-  theme(legend.position = "bottom",
-        legend.text = element_text(size = 7)) +
-  labs(x = "Year", y = "Number of PhDs",
-       title = "Number of Statistics-related PhDs awarded over time",
-       color = "Field")
+summary(lm(bill_depth_mm ~ bill_length_mm * species, data = penguins))
 ```
 
-- Lines alleviate issue of times series running into each other which is difficult to read with points
-]
-.pull-right[
+```
+## 
+## Call:
+## lm(formula = bill_depth_mm ~ bill_length_mm * species, data = penguins)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -2.6574 -0.6675 -0.0524  0.5383  3.5032 
+## 
+## Coefficients:
+##                                 Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)                     11.40912    1.13812  10.025  &lt; 2e-16 ***
+## bill_length_mm                   0.17883    0.02927   6.110 2.76e-09 ***
+## speciesChinstrap                -3.83998    2.05398  -1.870 0.062419 .  
+## speciesGentoo                   -6.15812    1.75451  -3.510 0.000509 ***
+## bill_length_mm:speciesChinstrap  0.04338    0.04558   0.952 0.341895    
+## bill_length_mm:speciesGentoo     0.02601    0.04054   0.642 0.521590    
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.9548 on 336 degrees of freedom
+##   (2 observations deleted due to missingness)
+## Multiple R-squared:  0.7697,	Adjusted R-squared:  0.7662 
+## F-statistic: 224.5 on 5 and 336 DF,  p-value: &lt; 2.2e-16
+```
 
-&lt;img src="figs/Lec12/unnamed-chunk-6-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-
-]
 
 ---
 
-## Use [`ggrepel`](https://ggrepel.slowkow.com/articles/examples.html) to directly label lines
+## A Few Linear Regression Warnings
+
+
+#### Simpson's Paradox
+
+- There is a negative linear relationship between two variables but a positive linear relationship within every subpopulation
+
+- In these cases, subgroup analysis is especially important
+
+--
+
+#### Is the intercept meaningful?
+
+- Think about whether `\(X = 0\)` makes scientific sense for a particular variable before you interpret the intercept
+
+--
+
+#### Interpolation versus Extrapolation
+
+- Interpolation is defined as prediction within the range of a variable
+
+- Extrapolation is defined as prediction outside the range of a variable
+
+- Generally speaking, interpolation is more reliable than extrapolation. (Less sensitive to model misspecification.)
+
+
+---
+
+## Extrapolation Example
 
 &lt;img src="figs/Lec12/unnamed-chunk-7-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
-
 ---
 
-## How do we plot many lines? NOT LIKE THIS!
+## Extrapolation Example
 
 &lt;img src="figs/Lec12/unnamed-chunk-8-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
+
 ---
 
-## Instead we highlight specific lines
+## Extrapolation Example
 
 &lt;img src="figs/Lec12/unnamed-chunk-9-1.png" width="100%" style="display: block; margin: auto;" /&gt;
 
----
-
-## What about Nightingale's rose diagram?
-
-&lt;img src="https://daily.jstor.org/wp-content/uploads/2020/08/florence_nightingagle_data_visualization_visionary_1050x700.jpg" width="90%" style="display: block; margin: auto;" /&gt;
 
 ---
 
-## What about Nightingale's rose diagram?
+## Take-home exam logistics
 
-&lt;img src="figs/Lec12/unnamed-chunk-11-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+#### I will post it today at 2:30 PM ET, due Wednesday 11:59 PM ET on Gradescope
 
+While the exam is in progress...
 
----
++ You cannot talk to anyone else about 36-315.
 
-## What about displaying lines instead?
++ You cannot post on Piazza.
 
-&lt;img src="figs/Lec12/unnamed-chunk-12-1.png" width="100%" style="display: block; margin: auto;" /&gt;
++ You _can_ use any materials that are available to you (lectures, labs, homeworks, R demos).
 
+One-on-one exam office hours: Wednesday 12:00 to 12:50 PM, then 1:30 to 2:30 EST (zoom to be posted on Canvas)
 
----
-
-## Storytelling with animation...
-
-
-
-.pull-left[
++ __Only__ for clarifying questions about what is being asked on the exam.
 
 
-```r
-f1_data_ex %&gt;%
-  ggplot(aes(x = round, y = points, 
-             group = name, color = name)) +
-  geom_line(size = 2) +
-  scale_x_continuous(breaks = seq(1, 17, 1)) +
-  labs(title = "The race for third place in the 2020 F1 season",
-       y = "Accumulated points", x = NULL) +
-  theme_bw()
-```
+Have a question but can't come to these office hours? __Email me!__
 
-- Can see the accumulated points increasing over time for each team
+Best way to prepare:
 
-- But we could _incrementally_ reveal the results at each stage __to emphasize the story of progression__
++ Look over lecture notes, R demos, homework/lab solutions
 
-]
-
-.pull-right[
-&lt;img src="figs/Lec12/unnamed-chunk-14-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-
-]
++ Come to office hours!
 
 ---
 
-## Use [`gganimate`](https://gganimate.com/) to add animations
+## The Main Skills I've Wanted You to Learn
 
-.pull-left[
+#### Pick graph types that are most appropriate for a particular dataset
 
++ Requires a working knowledge of different graph types and need to appropriately distinguish categorical vs quantitative variables.
 
-```r
-library(gganimate)
-f1_data_ex %&gt;%
-  ggplot(aes(x = round, y = points, 
-             group = name, color = name)) +
-  geom_line(size = 2) +
-  scale_x_continuous(breaks = seq(1, 17, 1)) +
-  labs(title = "The race for third place in the 2020 F1 season",
-       y = "Accumulated points", x = NULL) +
-  theme_bw() +
-  # Reveal the results by round
-* transition_reveal(round)
-```
++ For any graph, need to know what information is visible vs hidden
 
-- Emphasize the intermediate results through animation with the `transition_reveal()` function
+--
 
-]
+#### Characterizing distributions (visually and quantitatively)
 
-.pull-right[
-&lt;img src="figs/Lec12/unnamed-chunk-15-1.gif" width="100%" style="display: block; margin: auto;" /&gt;
++ Need a "distributional vocabulary" (center/mode, spread, skewness) and need to choose graphs that showcase distributional quantities 
 
-]
++ Need to choose graph _specifications_ that showcase distributional quantities (e.g., binwidth/bandwidth)
 
----
+--
 
-## Using animation to add a dimension
+#### Conduct statistical inference to complement graphs
 
-.pull-left[
++ For most differences you spot in a graph, should be able to follow-up with an analysis to determine if that difference is significant
 
++ Requires a working knowledge of different statistical tests
 
-```r
-txhousing %&gt;% 
-  group_by(city, year) %&gt;% 
-  summarize(median = mean(median, na.rm = TRUE),
-            listings = mean(listings, na.rm = TRUE)) %&gt;% 
-  ggplot(aes(x = median, y = listings, 
-             color = (city == "Houston"),
-             size = (city == "Houston"))) +
-  geom_point(alpha = 0.5, show.legend = FALSE) +
-  scale_color_manual(values = c("black", "darkred")) +
-  scale_size_manual(values = c(2, 4)) +
-  scale_x_continuous(labels = scales::dollar, 
-                     name = "Median Price") +
-  scale_y_continuous(labels = scales::label_number_si()) +
-  theme_bw() +
-  labs(x = "Median Price", 
-       y = "Avg. of Monthly Listings",
-       subtitle = "Houston in red")
-```
-
-
-]
-.pull-right[
-
-&lt;img src="figs/Lec12/unnamed-chunk-16-1.png" width="100%" style="display: block; margin: auto;" /&gt;
-
-
-]
-
----
-
-## Using animation to add a dimension
-
-.pull-left[
-
-
-```r
-txhousing %&gt;% 
-  group_by(city, year) %&gt;% 
-  summarize(median = mean(median, na.rm = TRUE),
-            listings = mean(listings, na.rm = TRUE)) %&gt;% 
-  ggplot(aes(x = median, y = listings, 
-             color = (city == "Houston"),
-             size = (city == "Houston"))) +
-  geom_point(alpha = 0.5, show.legend = FALSE) +
-  scale_color_manual(values = c("black", "darkred")) +
-  scale_size_manual(values = c(2, 4)) +
-  scale_x_continuous(labels = scales::dollar, 
-                     name = "Median Price") +
-  scale_y_continuous(labels = scales::label_number_si()) +
-  theme_bw() +
-  labs(x = "Median Price", y = "Avg. of Monthly Listings",
-       subtitle = "Houston in red", 
-*      title = "Year: {frame_time}") +
-* transition_time(year)
-```
-
-
-]
-.pull-right[
-
-&lt;img src="figs/Lec12/unnamed-chunk-17-1.gif" width="100%" style="display: block; margin: auto;" /&gt;
-
-
-]
++ Need to know how to interpret the output from statistical tests (knowing the null/alternative hypotheses is key!)
 
 
 ---
 
-# Reminders about animation
+## Variable Types
 
-Some key points to think about before adding animation to a visualization:
+The first thing you should do when you look at a dataset is determine what the variable types are.
 
-1. Always make and describe the original / base graphic first that does NOT include animation.
+__Categorical__: May have order (ordinal) or no order (nominal).
 
-2. Before adding animation to the graph, ask yourself: How would animation give you additional insights about the data **that you would otherwise not be able to**?
++ Often represented as a `factor` in `R`
 
-3. Never add animation just because it's cool! 
++ May be coded with numbers!
 
-4. When presenting, make sure you explain exactly what is being displayed with animation and what within the animation you want to emphasize. This will help you determine if animation is actually worth including.
++ If only 3-5 values, probably appropriate to treat as categorical.
+
+__Quantitative__: Represented numerically. Always has order.
+
++ Represented as `numeric` or `integer` in `R`.
+
+
+How to determine if a variable is quantitative or categorical?
+
++ Often obvious, but not always.=
+
++ _Subtraction test_: Does `\(X_1 - X_2\)` lead to a sensible value? If so, it's quantitative.
+
++ If a variable is used in scatterplots/regression, it shouldn't have a super strict range. 1-to-5 Likert scale variables fail this.
+
+---
+
+## Variable Type Situations
+
+
+---
+
+## Variable Type Situations
+
+
+
+---
+
+## Statistical Tests/Analyses
+
+__Chi-square test for equal proportions__: `\(H_0: p_1 = \cdots = p_K\)`.
+
+__Chi-square test for independence__: `\(H_0:\)` Variables are independent.
+
++ Dependence: `\(P(A | B) \neq P(A)\)`
+
+--
+
+__One-sample KS test__: `\(H_0\)`: Variable follows a distribution.
+
+__t-test/ANOVA__: `\(H_0\)`: Group means equal.
+
+__Bartlett's test__: `\(H_0\)`: Group variances equal.
+
+__Two-Sample KS Test__: `\(H_0\)`: Variables follow the same distribution.
+
+--
+
+__Linear Regression__: `\(H_0: \beta = 0\)`
+
++ Need to distinguish between intercepts and slopes!
+
+
+#### Remember: Different tests have different _power_ (chance of rejecting `\(H_0\)` when you should)
+
+
+---
+
+### Distribution Terminology
+
+__Marginal Distributions__: `\(P(A)\)` - plot a graph of a single variable `\(A\)`.
+
++ Perhaps compare confidence intervals for different categories of `\(A\)`.
+
+--
+
+__Conditional Distributions__: `\(P(A | B)\)` - in English: Distribution of `\(A\)` given a particular value of `\(B\)`.
+
++ Goal: Compare `\(P(A | B = b)\)` for different `\(b\)` when `\(A\)` is quantitative and `\(B\)` categorical
+
++ A univariate graph (histograms, densities, violins) for each category.
+
++ When `\(A\)` and `\(B\)` are categorical, can visualize with stacked bar plots or mosaic plots.
+
++ Note: Linear regression estimates `\(\mathbb{E}[Y | X]\)`
+
+--
+
+__Joint Distribution__: `\(P(A, B)\)`
+
++ Use mosaic plots when `\(A\)` and `\(B\)` are categorical.
+
++ `\(P(A | B) P(B) = P(A, B)\)`
+
++ Scatterplots display joint distribution for continuous.
+
+
+---
+
+### Good luck!
+
+&lt;img src="https://media.tenor.com/jLWC97XT1ZIAAAAC/star-wars-han-solo.gif" width="100%" style="display: block; margin: auto;" /&gt;
+
 
 
 ---
 class: center, middle
 
-# Next time: [`htmlwidgets`](http://www.htmlwidgets.org/index.html) and dashboards
+# TAKE-HOME EXAM IS DUE WEDNESDAY!
 
-__Report due Friday Oct 14th by 5 PM EDT via email!__ 
+Reminder: __Graphics critique due tomorrow night!__
 
-Recommended reading: 
-
-[CW CH 13 Visualizing time series and other functions of an independent variable](https://clauswilke.com/dataviz/time-series.html)
-
-[CW CH 14 Visualizing trends](https://clauswilke.com/dataviz/visualizing-trends.html)
-
-[`gganimate` package](https://gganimate.com/)
-
-
-
+Please fill out this midsemester survey _after_ the exam: https://forms.gle/Rqzf4Ptx4X1CZXJX9
 
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>

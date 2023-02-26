@@ -34,6 +34,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 9       | Comparing Distributions and Statistical Power | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec9#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec9.Rmd) |
 | 10      | 2D Quantitative Data: Scatterplots and Linear Regression | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec10#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec10.Rmd) |
 | 11      | Inference with Linear Regression | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec11#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec11.Rmd) |
+| 12      | More Regression and Midsemester Review | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec12#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec12.Rmd) |
 
 
 
