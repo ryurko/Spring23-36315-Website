@@ -1,9 +1,9 @@
 ---
-title: "36-613: Data Visualization"
-subtitle: "Extras with htmlwidgets and Dashboards"  
+title: "36-315 Lecture 13"
+subtitle: "Nonlinear Regression and Pairs Plots"  
 author: 
   - "Professor Ron Yurko"
-date: '10/12/2022'
+date: '3/13/2023'
 output:
   xaringan::moon_reader:
     css: xaringan-themer.css
@@ -26,9 +26,9 @@ knitr::opts_chunk$set(
   message = FALSE, 
   warning = FALSE,
   hiline = TRUE,
-  fig.path = "figs/Lec11/"
+  fig.path = "figs/Lec13/"
 )
-xaringanExtra::use_scribble()
+
 xaringanExtra::use_clipboard()
 ```
 
@@ -36,118 +36,162 @@ xaringanExtra::use_clipboard()
 library(xaringanthemer)
 style_duo_accent(
   primary_color = "#c41230",
-  secondary_color = "#4d5051",
+  secondary_color = "#0277BD",
   inverse_header_color = "#FFFFFF"
 )
 ```
 
-```{r, echo = FALSE}
+
+```{r, include = FALSE}
 library(tidyverse)
 library(palmerpenguins)
-data(penguins)
 ```
 
+## Logistics 
 
-# REMINDER: Please fill out the FCE!
+Please fill out the midsemester feedback survey: https://forms.gle/tNqL2sHPTHF1UZ9v6
 
-#### Faculty course evaluations (FCEs) are out now
 
-#### I take feedback very seriously and I want the course to be useful!
+I've already received some very helpful feedback:
 
-#### If you enjoyed this class, please fill out the FCE.
++ Lecture pace is good, __but more emphasis on takeaway messages__
 
-#### If you didn’t enjoy this class, please fill out the FCE.
++ Labs are helpful but too long (good news: no lab this week!)
+
++ _What's the deal with the final project?_
+
+As part of Homework 5, you'll form groups for final projects
+
++ Teams should be 3-4 students, __you can pick your teammates or be randomized to a team__
+
++ Goal of the project: Create visualizations for a dataset of your choice. Requirements for dataset on Canvas.
+
+  + Examples: https://www.stat.cmu.edu/capstoneresearch/#graphics
+
++ HW5 is shorter so you have time to form teams and explore datasets (see guidelines on Canvas).
+
+---
+
+## Conceptual Review
+
+Previously: Reviewed inference for simple linear regression
+
+The statistical model for simple linear regression is
+
+$$Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_1 X_{i}, \sigma^2), \hspace{0.1in} \text{for all } i=1,\dots,n$$
++ where $\beta_0$ is the intercept and $\beta_1$ is the slope
+
+The statistical model for multiple linear regression is
+
+$$Y_i \stackrel{iid}{\sim} N(\beta_0 + \beta_1 X_{i1} + \cdots + \beta_k X_{ik}, \sigma^2), \hspace{0.1in} \text{for all } i=1,\dots,n$$
+
+Today:
+
++ How does LOESS (nonlinear regression) work?
+
++ Pairs plots
 
 
 ---
 
-## A bridge between `R` and JavaScript
+## Beyond Linear Regression
 
--  JavaScript enables web developers to create __client-side__ web applications
+Many kinds of regression methods - we'll focus on _local linear regression_ for now.
 
-  - Computations are happening __in the client's browser__, instead of the host's web servers
-  
-- `D3` (or `D3.js`) is the most popular JavaScript library for client-side dynamic data visualizations
+Let's say: Still willing to assume Normality, but not linearity where $f(x)$ is some unknown function
 
-  - `D3` == 'data-driven documents'
+$$Y_i \stackrel{iid}{\sim} N(\underbrace{f(X_i)}, \sigma^2)$$
+#### Intuition: Any nonlinear function is locally linear
+
+We saw this in the extrapolation example
+
++ Local linear regressions fits a bunch of, well, local linear regressions, and then glues them together
+
++ Local linear regression is basically _weighted linear regression_, where only "local units" get weight
+
+---
+
+## Weighted Linear Regression
+
+Remember that in typical linear regression, we solve the following:
+
+$$\arg \min_{\beta_0,\beta_1} \sum_{i=1}^n (Y_i - \beta_0 - \beta_1 X_i)^2$$
+
+In weighted linear regression, we solve the following:
+
+$$\arg \min_{\beta_0,\beta_1} \sum_{i=1}^n W_i \cdot (Y_i - \beta_0 - \beta_1 X_i)^2$$
+
+
+Local linear regression is exactly the same, except the weights depend on which $x$ we want to estimate $f(x)$.
+
+---
+
+## Local linear regression via 
+
+## LOESS (Local Estimated Scatterplot Smoothing)
+
+In __local linear regression__, we estimate $f(X_i)$:
+
+$$\text{arg }\underset{\beta_0, \beta_1}{\text{min}} \sum_i^n w_i(x) \cdot \big(Y_i - \beta_0 - \beta_1 X_i \big)^2$$ 
+
+- Notice the weights depend on $x$, meaning observations close to $x$ given large weight in estimating $f(x)$
 
 --
 
-- RStudio developers created the [`htmlwidgets`](http://www.htmlwidgets.org/index.html) enabling `R` users to use `D3` without needing to learn JavaScript!
+`geom_smooth()` uses tri-cubic weighting:
 
-- Renders data visualizations in HTML using `D3` wrappers
+$$w_i(d_i) = \begin{cases} (1 - |d_i|^3)^3, \text{ if } i \in \text{neighborhood of  } x, \\
+0 \text{ if } i \notin \text{neighborhood of  } x \end{cases}$$
 
-  - [Incredible gallery with a variety of uses](http://gallery.htmlwidgets.org/), including a chess package called [`rchess`](http://jkunst.com/rchess/)!
+  - where $d_i$ is the distance between $x$ and $X_i$ scaled to be between 0 and 1
+  
+  - control `span`: decides proportion of observations in neighborhood
+  
   
 ---
 
-## [Leaflet](https://rstudio.github.io/leaflet/): interactive HTML maps
+## [Animation example](http://rafalab.dfci.harvard.edu/dsbook/smoothing.html)
 
-.pull-left[
-
-```{r cmu-map, eval = FALSE}
-cmu <- 
-  tibble(address = "Carnegie Mellon University, Pittsburgh, PA") %>%
-  tidygeocoder::geocode(address, method = "osm") #<<
-
-library(leaflet)
-leaflet() %>% addTiles() %>% #<<
-  addMarkers(data = cmu) #<<
+```{r, fig.align='center', echo = FALSE, out.width="50%"}
+knitr::include_graphics("http://rafalab.dfci.harvard.edu/dsbook/ml/img/loess-animation.gif")
 ```
 
-- `addTiles()`: builds layer with static map (default from OpenStreetMap)
-
-- `addMarkers()`: add marker at point location, e.g., CMU
-
-- Use [`tidygeocoder`](https://cran.r-project.org/web/packages/tidygeocoder/vignettes/tidygeocoder.html) for spatial queries
-
-
-]
-
-.pull-right[
-
-```{r ref.label="cmu-map", fig.align='center', fig.height=7, echo = FALSE}
-
-```
-
-
-
-]
 
 ---
 
-## [DataTables (DT) package](https://rstudio.github.io/DT/) for interactive tables
+## [Animation example](http://rafalab.dfci.harvard.edu/dsbook/smoothing.html) - changing the span
 
-```{r, fig.align='center', out.width="80%"}
-library(DT)
-datatable(penguins[, 1:6], options = list(pageLength = 5)) #<<
+```{r, fig.align='center',  echo = FALSE, out.width="50%"}
+knitr::include_graphics("http://rafalab.dfci.harvard.edu/dsbook/ml/img/loess-multi-span-animation.gif")
 ```
 
 
 
 ---
 
-## Interactive plots with [Plotly](https://plotly.com/r/)
+## Displaying trend lines: LOESS
 
 .pull-left[
 
-- Start with an initial plain plot
-
-```{r plain-plot, eval = FALSE}
-scatter_plain <- penguins %>% 
-  ggplot(aes(x = body_mass_g, y = bill_length_mm, 
-             color = species)) +
-  geom_point(alpha = 0.5, size = 2) +
-  labs(x = "Body Mass (g)", y = "Bill Length (mm)") +
-  theme_bw()
-scatter_plain
+```{r loess-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+  geom_smooth() #<<
 ```
+
+- LOESS is default behavior with $n \leq 1000$
+
+- Default `span = 0.75`
+
+- For $n > 1000$, `mgcv::gam()` is used with `formula = y ~ s(x, bs = "cs")` and `method = "REML"`
 
 
 ]
 .pull-right[
 
-```{r ref.label="plain-plot", fig.align='center', fig.height=7, echo = FALSE}
+```{r ref.label="loess-plot", echo = FALSE, fig.height=7}
 
 ```
 
@@ -156,104 +200,215 @@ scatter_plain
 
 ---
 
-## Interactive plots with [Plotly](https://plotly.com/r/)
+## Displaying trend lines: LOESS
 
 .pull-left[
 
-- Make it interactive with `ggplotly`
-
-```{r go-plotly, eval = FALSE}
-library(plotly)
-ggplotly(scatter_plain)
+```{r loess-span-plot, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+  geom_smooth(span = .1) #<<
 ```
 
-- `plotly` has its own plotting syntax, but we can just use `ggplot2` instead 
+- LOESS is default behavior with $n \leq 1000$
 
-  - there will be some annoying differences at times, so just be careful
-  
-- Several ways to interact: filter, zoom, and view additional info by hovering over the points with tooltip...
+- Default `span = 0.75`
+
+- For $n > 1000$, `mgcv::gam()` is used with `formula = y ~ s(x, bs = "cs")` and `method = "REML"`
+
 
 ]
 .pull-right[
 
-```{r ref.label="go-plotly", fig.align='center', fig.height=7, echo = FALSE}
+```{r ref.label="loess-span-plot", echo = FALSE, fig.height=7}
 
 ```
+
+
 ]
 
 ---
 
-## Customize the tooltip
+## Displaying trend lines: LOESS
 
 .pull-left[
 
-- Update to include `text` with penguin's `sex`
-
-```{r tool-plotly, eval = FALSE}
-scatter_upd <- penguins %>% 
-  ggplot(aes(x = body_mass_g, y = bill_length_mm, 
-             color = species,
-             text = paste("sex:", sex))) + #<<
-  geom_point(alpha = 0.5, size = 2) +
-  labs(x = "Body Mass (g)", y = "Bill Length (mm)") +
-  theme_bw()
-
-ggplotly(scatter_upd, 
-         tooltip = c("text", "species")) #<<
+```{r loess-span-plot-wide, eval = FALSE}
+penguins %>%
+  ggplot(aes(x = flipper_length_mm, 
+             y = body_mass_g)) +
+  geom_point(alpha = 0.5) + 
+  geom_smooth(span = 1) #<<
 ```
 
-- We can specify what is included in the tooltip when hovering over the points
+- LOESS is default behavior with $n \leq 1000$
+
+- Default `span = 0.75`
+
+- For $n > 1000$, `mgcv::gam()` is used with `formula = y ~ s(x, bs = "cs")` and `method = "REML"`
+
 
 ]
 .pull-right[
 
-```{r ref.label="tool-plotly", fig.align='center', fig.height=7, echo = FALSE}
+```{r ref.label="loess-span-plot-wide", echo = FALSE, fig.height=7}
 
 ```
 
+
 ]
+
 
 ---
 
-# Putting it all together with dashboards
+## More plots with penguins...
 
-- Dashboards are popular way to make data and visualizations available to clients, managers, stakeholders, etc. to help with decision making
+Pretend I give you this `penguins` dataset and I ask you to make a plot __for every pairwise comparison__...
 
-- Typically include a mix of graphics and text, depending on the context 
+```{r}
+library(palmerpenguins)
+penguins %>% slice(1:3)
+```
 
 --
 
-- Can easily make HTML dashboards using the [`flexdashboard`](https://pkgs.rstudio.com/flexdashboard/) package
+We can create a __pairs plot__ to see __all__ pairwise relationships __in one plot__
 
-  - Provide interactive capabilities within an HTML file (i.e., you can email this!)
-  
-  - __These are NOT fully interactive like Shiny apps__
-  
-  - [You can use Shiny within `flexdashboard`](https://pkgs.rstudio.com/flexdashboard/articles/shiny.html) but it requires a Shiny server
-  
-  - Another option is [`shinydashboard`](https://rstudio.github.io/shinydashboard/)
-  
-- Outside of `R`, [Tableau](https://public.tableau.com/app/discover) is a popular tool (can use free Tableau Public version)
+Pairs plot can include the various kinds of pairwise plots we've seen:
 
+- Two quantitative variables: scatterplot
+
+- One categorical, one quantitative: side-by-side violins, stacked
+histograms, overlaid densities
+
+- Two categorical: stacked bars, side-by-side bars, mosaic plots
 
 ---
-class: center, middle
 
-# DO IT LIVE
+## Pairs plots for penguins
+
+.pull-left[
+
+Use the [`GGally`](https://ggobi.github.io/ggally/index.html) package
+
+```{r pairs-plot, eval = FALSE}
+library(GGally)
+penguins %>% 
+  ggpairs(columns = 3:6) #<<
+```
+
+Main arguments to change are:
+
++ `data`: specifies the dataset
+
++ `columns`: columns of data you want in the plot (can specify with vector of column names or numbers referring to the column indices)
+
++ `mapping`: aesthetics using `aes()` - most important is `aes(color = <variable name>)`
+
+Created pairs plot above by specifying `columns` as the four columns of continuous variables (columns 3-6)
+
+
+]
+
+.pull-right[
+```{r ref.label="pairs-plot", echo = FALSE, fig.height=7}
+
+```
+
+
+]
 
 ---
-class: center, middle
 
-# Final Report due Friday Oct 14th by 5 PM EDT via email! (just one per group)
+## Pairs plots for penguins
 
-Recommended reading: 
+.pull-left[
 
-[Modern Data Science with R: CH 14 Dynamic and customized data graphics](https://mdsr-book.github.io/mdsr2e/ch-vizIII.html)
+Annoying aspect: change `alpha` directly with `aes` when using `ggpairs`:
 
-[`plotly` resources](https://plotly.com/r/)
+```{r pairs-plot-alpha, eval = FALSE}
+penguins %>% 
+  ggpairs(columns = 3:6,
+          mapping = aes(alpha = 0.5)) #<<
+```
 
-[`htmlwidgets` gallery](http://gallery.htmlwidgets.org/)
+- Diagonal: marginal distributions
+
+- Off-diagonal: joint (pairwise) distributions or statistical summaries (e.g., correlation)
+
+- Matrix of plots is symmetric
+
+]
+
+.pull-right[
+```{r ref.label="pairs-plot-alpha", echo = FALSE, fig.height=7}
+
+```
 
 
+]
+
+---
+
+## Read Lecture 13 Demo for more info on customization!
+
+.pull-left[
+
+```{r, echo = FALSE, fig.height=7}
+penguins %>% 
+  ggpairs(columns = c("bill_length_mm", "body_mass_g", "island"),
+          mapping = aes(alpha = 0.5, color = species), 
+          lower = list(
+            continuous = "smooth_lm", 
+            combo = "facetdensitystrip"
+          ),
+          upper = list(
+            continuous = "cor",
+            combo = "facethist"
+          )
+  )
+```
+
+
+]
+
+.pull-right[
+
+```{r, echo = FALSE, fig.height=7}
+penguins %>%
+  dplyr::select(species, body_mass_g, ends_with("_mm")) %>%
+  ggpairs(mapping = aes(color = species, alpha = 0.5),
+          columns = c("flipper_length_mm", "body_mass_g",
+                      "bill_length_mm", "bill_depth_mm")) +
+  scale_colour_manual(values = c("darkorange","purple","cyan4")) +
+  scale_fill_manual(values = c("darkorange","purple","cyan4")) +
+  theme_bw() +
+  theme(strip.text = element_text(size = 7))
+```
+
+]
+
+---
+
+# Main Takeaways
+
+#### LOESS may seem like magic, but it's just a bunch of little linear regressions glued together
+
+#### Pairs plots: Nice way to see all pairwise relationships in a dataset
+
+--
+
+__Reminders__
+
++ __HW5 is due next Wednesday March 22nd!__
+
++ __Graphics critique due April 7th!__
+
++ __You do NOT have lab this Friday!__
+
+
+#### Next time: Contour Plots and Heat Maps
 
 
