@@ -1,0 +1,451 @@
+---
+title: "36-315 Lecture 14"
+subtitle: "Contour Plots, Heat Maps, and into High-Dimensional Data"  
+author: 
+  - "Professor Ron Yurko"
+date: '3/15/2023'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE,
+  fig.path = "figs/Lec14/"
+)
+
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#c41230",
+  secondary_color = "#0277BD",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+```
+
+
+## Popular Graphics Critique:  [LeBron James' Longevity](https://flowingdata.com/2023/02/10/lebron-james-longevity/) 
+
+
+```{r, echo = FALSE, fig.align='center', out.width="80%"}
+knitr::include_graphics("https://flowingdata.com/wp-content/uploads/2023/02/LeBron-James-longevity-e1676049804339-1536x924.png")
+```
+
+
+---
+
+## 2D quantitative data
+
+- We're working with two variables: $(X, Y) \in \mathbb{R}^2$, i.e., dataset with $n$ rows and 2 columns
+
+- Goals:
+
+  - describing the relationships between two variables
+  
+  - describing the conditional distribution $Y | X$ via regression analysis
+  
+  - __TODAY: describing the joint distribution $X,Y$ via contours, heatmaps, etc.__
+
+
+- Few big picture ideas to keep in mind:
+
+  - scatterplots are by far the most common visual
+  
+  - regression analysis is by far the most popular analysis (you will have several classes on this...)
+  
+  - there are many types of nonlinear relationships
+  
+  - relationships may vary across other variables, e.g., categorical variables
+  
+---
+
+## Visuals to focus on the joint distribution
+
+```{r, echo = FALSE}
+lebron_shots <- read_csv("https://raw.githubusercontent.com/ryurko/Spring23-36315-Data/main/lebron_shots.csv")
+```
+
+.pull-left[
+
+- Example [dataset of LeBron James' shots this NBA season](https://raw.githubusercontent.com/ryurko/Spring23-36315-Data/main/lebron_shots.csv) accessed using [`hoopR`](https://hoopr.sportsdataverse.org/)
+
+```{r lebron-shots, eval = FALSE}
+lebron_shots %>%
+  ggplot(aes(x = coordinate_x, 
+             y = coordinate_y)) +
+  geom_point(alpha = 0.4) +
+  coord_fixed() + #<<
+  theme_bw()
+```
+
+- Where are the high/low concentrations of X,Y?
+
+- How do we display concentration for 2D data?
+
+- `coord_fixed()` so axes match with unit scales
+
+]
+
+.pull-right[
+```{r ref.label="lebron-shots", echo = FALSE, fig.height=8}
+```
+
+]
+
+---
+
+## Going from 1D to 2D density estimation
+
+In 1D: estimate density $f(x)$, assuming that $f(x)$ is _smooth_:
+
+$$
+\hat{f}(x) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h} K_h(x - x_i)
+$$
+
+--
+
+In 2D: estimate joint density $f(x_1, x_2)$
+
+$$\hat{f}(x_1, x_2) = \frac{1}{n} \sum_{i=1}^n \frac{1}{h_1h_2} K(\frac{x_1 - x_{i1}}{h_1}) K(\frac{x_2 - x_{i2}}{h_2})$$
+
+--
+
+In 1D there was one bandwidth, now __we have two bandwidths__
+
+  - $h_1$: controls smoothness as $X_1$ changes, holding $X_2$ fixed
+  - $h_2$: controls smoothness as $X_2$ changes, holding $X_1$ fixed
+
+Again Gaussian kernels are the most popular...
+
+---
+
+## So how do we display densities for 2D data?
+
+```{r, echo = FALSE, out.width="60%", fig.align='center'}
+knitr::include_graphics("https://www.byclb.com/TR/Tutorials/neural_networks/Ch_4_dosyalar/image044.gif")
+```
+
+
+---
+
+## How to read contour plots?
+
+Best known in topology: outlines (contours) denote levels of elevation
+
+```{r, echo = FALSE, out.width="60%", fig.align='center'}
+knitr::include_graphics("https://preview.redd.it/2rbe8s8t7re31.jpg?auto=webp&s=eed849b180dd803d394f556432df026c4cd1dae2")
+```
+
+
+---
+
+## Display 2D contour plot
+
+.pull-left[
+
+
+```{r lebron-contour, eval = FALSE}
+lebron_shots %>%
+  ggplot(aes(x = coordinate_x, 
+             y = coordinate_y)) +
+  geom_point(alpha = 0.4) +
+  geom_density2d() + #<<
+  coord_fixed() +
+  theme_bw()
+```
+
+- Use `geom_density2d` to display contour lines
+
+- Inner lines denote "peaks"
+
+]
+
+.pull-right[
+```{r ref.label="lebron-contour", echo = FALSE, fig.height=8}
+```
+
+]
+
+
+---
+
+## Display 2D contour plot
+
+.pull-left[
+
+
+```{r lebron-contour-fill, eval = FALSE}
+lebron_shots %>%
+  ggplot(aes(x = coordinate_x, 
+             y = coordinate_y)) +
+  stat_density2d(
+    aes(fill = after_stat(level)), #<<
+    geom = "polygon") + #<<
+  geom_point(alpha = 0.2) +
+  coord_fixed() +
+  scale_fill_gradient(low = "darkblue", #<<
+                      high = "darkorange") + #<<
+  theme_bw()
+```
+
+- Use `stat_density2d` for additional features
+
+- May be easier to read than nested lines with color
+
+- __Default color scale is awful!__ Always change it!
+
+
+]
+
+.pull-right[
+```{r ref.label="lebron-contour-fill", echo = FALSE, fig.height=8}
+```
+
+]
+
+---
+
+## Visualizing grid heat maps
+
+.pull-left[
+
+
+```{r lebron-heatmap, eval = FALSE}
+lebron_shots %>%
+  ggplot(aes(x = coordinate_x, 
+             y = coordinate_y)) +
+  stat_density2d(
+    aes(fill = after_stat(density)), #<<
+    geom = "tile", #<<
+    contour = FALSE) + #<<
+  geom_point(alpha = 0.2) +
+  coord_fixed() +
+  scale_fill_gradient(low = "white", #<<
+                      high = "red") + #<<
+  theme_bw()
+```
+
+- Divide the space into a grid and color the grid according to high/low values
+
+- Common to treat "white" as empty color
+
+]
+
+.pull-right[
+```{r ref.label="lebron-heatmap", echo = FALSE, fig.height=8}
+```
+
+]
+
+---
+
+## Alternative idea: hexagonal binning
+
+.pull-left[
+
+
+```{r lebron-hexbin, eval = FALSE}
+lebron_shots %>%
+  ggplot(aes(x = coordinate_x, 
+             y = coordinate_y)) +
+  geom_hex() + #<<
+  coord_fixed() +
+  scale_fill_gradient(low = "darkblue", 
+                      high = "darkorange") + 
+  theme_bw()
+```
+
+- Can specify `binwidth` in both directions
+
+- 2D version of histogram 
+
+- _Need to install `hexbin` package_
+
+
+]
+
+.pull-right[
+```{r ref.label="lebron-hexbin", echo = FALSE, fig.height=8}
+```
+
+]
+
+---
+
+## What about high-dimensional data?
+
+Consider this [dataset]((https://github.com/rfordatascience/tidytuesday/blob/master/data/2021/2021-12-21/readme.md) containing nutritional information about Starbucks drinks:
+
+```{r, warning = FALSE, message = FALSE}
+starbucks <- 
+  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
+  # Convert columns to numeric that were saved as character
+  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
+starbucks %>% slice(1)
+```
+
+
+#### How do we visualize this dataset? 
+
+--
+
+- Tedious task: make a series of pairs plots (one giant pairs plot would be ridiculous)
+
+
+---
+
+## What about high-dimensional data?
+
+
+```{r, warning = FALSE, message = FALSE}
+starbucks <- 
+  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
+  # Convert columns to numeric that were saved as character
+  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
+starbucks %>% slice(1)
+```
+
+#### Goals to keep in mind with visualizing high-dimensional data
+
+- __Visualize structure among observations__ using distances matrices, projections (Monday's lecture)
+
+- __Visualize structure among variables__ using correlation as "distance"
+
+
+---
+
+## Correlogram to visualize correlation matrix
+
+.pull-left[
+
+Use the [`ggcorrplot`](https://rpkgs.datanovia.com/ggcorrplot/) package
+
+```{r cor-plot, eval = FALSE}
+starbucks_quant_cor <- 
+  cor(dplyr::select(starbucks, #<<
+                    serv_size_m_l:caffeine_mg))
+
+library(ggcorrplot)
+ggcorrplot(starbucks_quant_cor, #<<
+           method = "circle",
+           hc.order = TRUE,
+           type = "lower")
+```
+
+- Compute the correlation matrix (using quantitative variables)
+
+- Can rearrange using `hc.order = TRUE` based on clustering (next week!)
+
+- See Lecture 14 Demo for more examples...
+
+]
+
+.pull-right[
+
+```{r ref.label="cor-plot", echo = FALSE, fig.height=7}
+
+```
+
+
+]
+
+---
+
+## Parallel coordinates plot with [`ggparcoord`](https://ggobi.github.io/ggally/reference/ggparcoord.html)
+
+.pull-left[
+
+- Display each variable side-by-side on standardized axis
+
+- Connect observations with lines
+
+```{r par-coord, eval = FALSE}
+library(GGally)
+starbucks %>%
+  ggparcoord(columns = 5:15, #<<
+             alphaLines = .1) + #<<
+  theme(axis.text.x = 
+          element_text(angle = 90))
+```
+
+- Can change `scale` method for y-axis
+
+- Useful for moderate number of observations and variables
+
+- __How do we order the x-axis?__
+
+- __Does this agree with the correlogram?__
+
+]
+.pull-right[
+
+```{r ref.label="par-coord", echo = FALSE, fig.height=7}
+
+```
+
+]
+
+
+---
+
+## Easier example with penguins...
+
+```{r, echo = FALSE, fig.align='center'}
+library(palmerpenguins)
+penguins %>%
+  ggparcoord(columns = 3:6, alphaLines = .2, groupColumn = "species",
+             order = c(6, 5, 3, 4))
+```
+
+
+---
+
+# Main Takeaways
+
+#### We can extend kernel density estimation from 1 to $p$-dimensions (don't say easily though...)
+
+#### Contour plots: Common way to visualize two-dimensional densities
+
+#### Heat maps: divide the space into a grid, and then color the grid according to high/low densities
+
+#### Hexagonal bins: creating histograms in 2D
+
+#### Correlograms and Parallel Coordinates Plots are helpful tools for visualizing high-dimensional data
+
+--
+
++ __HW5 is due next Wednesday March 22nd!__
+
++ __Graphics critique due April 7th!__
+
++ __You do NOT have lab this Friday!__
+
++ Review more code in Lecture 14 Demo! 
+
+
+#### Next time: Visualizing Distances and MDS
+
+

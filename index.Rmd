@@ -36,6 +36,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 11      | Inference with Linear Regression | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec11#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec11.Rmd) |
 | 12      | More Regression and Midsemester Review | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec12#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec12.Rmd) |
 | 13      | Nonlinear Regression and Pairs Plots | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec13#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec13.Rmd) |
+| 14      | Contour Plots, Heat Maps, and into High-Dimensional Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/Lec14#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/Lec14.Rmd) |
 
 
 
@@ -49,6 +50,7 @@ Additional `R` demos are available below in html format.
 | 2     | Lecture 10 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture10_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture10_R_Demo.Rmd) |
 | 3     | Lecture 11 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture11_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture11_R_Demo.Rmd) |
 | 4     | Lecture 13 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture13_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture13_R_Demo.Rmd) |
+| 5     | Lecture 14 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture14_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture14_R_Demo.Rmd) |
 
 ## Resources
 
