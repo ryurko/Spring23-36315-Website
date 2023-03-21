@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>36-315 Lecture 16</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Professor Ron Yurko" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# 36-315 Lecture 16
+]
+.subtitle[
+## Dendrograms for Visualizing Distances and Clusters
+]
+.author[
+### Professor Ron Yurko
+]
+.date[
+### 3/22/2023
+]
+
+---
+
+
+
+
+
+
+
+
+
+## Conceptual review:  Multi-dimensional scaling (MDS)
+
+#### General approach for visualizing distance matrices
+
+- Puts `\(n\)` observations in a `\(k\)`-dimensional space such that the distances are preserved as much as possible
+
+  - where `\(k &lt;&lt; p\)` typically choose `\(k = 2\)`
+  
+MDS attempts to create new point `\(\boldsymbol{y}_i = (y_{i1}, y_{i2})\)` for each unit such that:
+
+`$$\sqrt{(y_{i1} - y_{j1})^2 + (y_{i2} - y_{j2})^2} \approx D_{ij}$$`
+
+- i.e., distance in 2D MDS world is approximately equal to the actual distance
+
+#### Then plot the new `\(\boldsymbol{y}\)`s on a scatterplot
+
+- Use the `scale()` function to ensure variables are comparable
+
+- Make a distance matrix for this dataset
+
+- Visualize it with MDS
+
+---
+
+## Lecture 16 Demo: [MCU movie data](https://informationisbeautiful.net/visualizations/which-is-the-best-performing-marvel-movie/)
+
+&lt;img src="figs/Lec16/unnamed-chunk-2-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Other ways to visualize distances and clusters
+
+MDS can be a great way to visualize distances and identify clusters...
+
+- However, requires picking certain variables that identify clusters well
+
+#### Is there a way to automatically identify clusters in the dataset?
+
+- Dendrograms are a nice way to visualize distances 
+
+- _Automatically_ clusters different units together based on distance
+
+`$$\overbrace{\text{Dendro}}^{\text{tree}}\underbrace{\text{gram}}_{\text{drawing}}$$`
+
+First, let's look at dendrograms and learn how to interpret them - then we'll discuss how they're made
+
+---
+
+## [Textbook example](https://bradleyboehmke.github.io/HOML/hierarchical.html)
+
+&lt;img src="https://bradleyboehmke.github.io/HOML/19-hierarchical_files/figure-html/comparing-dendrogram-to-distances-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+&lt;img src="https://bradleyboehmke.github.io/HOML/19-hierarchical_files/figure-html/comparing-dendrogram-to-distances-1.png" width="75%" style="display: block; margin: auto;" /&gt;
+
+
+- Observations that are _closer_ together are on the same branch
+
+- Doesn't tell you how many clusters there are, but does tell you which observations are clustered together
+
+- For now: What is the computer doing to make dendrograms?
+
+
+---
+
+## (Agglomerative) [Hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering)
+
+Let's pretend all `\(N\)` observations are in their own cluster
+
+--
+
+- Step 1: Compute the pairwise dissimilarities between each cluster
+
+  - e.g., distance matrix on previous slides
+  
+--
+  
+- Step 2: Identify the pair of clusters that are __least dissimilar__
+
+--
+
+- Step 3: Fuse these two clusters into a new cluster!
+
+--
+
+- __Repeat Steps 1 to 3 until all observations are in the same cluster__
+
+--
+
+__"Bottom-up"__, agglomerative clustering that forms a __tree / hierarchy__ of merging
+
+
+---
+
+## (Agglomerative) [Hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering)
+
+.pull-left[
+Start with all observations in their own cluster
+
+- Step 1: Compute the pairwise dissimilarities between each cluster
+
+- Step 2: Identify the pair of clusters that are __least dissimilar__
+
+- Step 3: Fuse these two clusters into a new cluster!
+
+- __Repeat Steps 1 to 3 until all observations are in the same cluster__
+]
+.pull-right[
+&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Clusters.svg/250px-Clusters.svg.png" width="70%" style="display: block; margin: auto;" /&gt;
+]
+
+---
+
+## (Agglomerative) [Hierarchical clustering](https://en.wikipedia.org/wiki/Hierarchical_clustering)
+
+.pull-left[
+Start with all observations in their own cluster
+
+- Step 1: Compute the pairwise dissimilarities between each cluster
+
+- Step 2: Identify the pair of clusters that are __least dissimilar__
+
+- Step 3: Fuse these two clusters into a new cluster!
+
+- __Repeat Steps 1 to 3 until all observations are in the same cluster__
+]
+.pull-right[
+&lt;img src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/ad/Hierarchical_clustering_simple_diagram.svg/418px-Hierarchical_clustering_simple_diagram.svg.png" width="85%" style="display: block; margin: auto;" /&gt;
+
+Forms a __dendrogram__ (typically displayed from bottom-up)
+]
+
+
+---
+
+## How do we define dissimilarity between clusters?
+
+We know how to compute distance / dissimilarity between two observations
+
+__But how do we handle clusters?__
+
+  - Dissimilarity between a cluster and an observation, or between two clusters
+  
+--
+
+We need to choose a __linkage function__! Clusters are built up by __linking them together__
+
+--
+
+Compute all pairwise dissimilarities between observations in cluster 1 with observations in cluster 2
+
+i.e. Compute the distance matrix between observations, `\(d(x_i, x_j)\)` for `\(i \in C_1\)` and `\(j \in C_2\)`
+
+--
+
+  - __Complete linkage__: Use the __maximum__ value of these dissimilarities: `\(\underset{i \in C_1, j \in C_2}{\text{max}} d(x_i, x_j)\)`
+  
+--
+
+  - __Single linkage__: Use the __minimum__ value: `\(\underset{i \in C_1, j \in C_2}{\text{min}} d(x_i, x_j)\)`
+
+--
+
+  - __Average linkage__: Use the __average__ value: `\(\frac{1}{|C_1| \cdot |C_2|} \sum_{i \in C_1} \sum_{j \in C_2} d(x_i, x_j)\)`
+  
+--
+
+Define dissimilarity between two clusters __based on our initial dissimilarity matrix between observations__
+
+
+---
+
+
+```r
+hc_complete &lt;- hclust(mcu_dist, method = "complete")
+plot(hc_complete, ylab = "Pairwise Distance", main = "Complete Linkage", xlab = "MCU Movies")
+```
+
+&lt;img src="figs/Lec16/unnamed-chunk-7-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+
+```r
+hc_single &lt;- hclust(mcu_dist, method = "single")
+plot(hc_single, ylab = "Pairwise Distance", main = "Single Linkage", xlab = "MCU Movies")
+```
+
+&lt;img src="figs/Lec16/unnamed-chunk-8-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+#### [`ggdendro` version](https://cran.r-project.org/web/packages/ggdendro/vignettes/ggdendro.html)
+
+
+```r
+library(ggdendro)
+*ggdendrogram(hc_complete, theme_dendro = FALSE) +
+  labs(y = "Cluster Dissimilarity (based on complete linkage)", 
+       title = "Which MCU movies are similar to each other?") + 
+  coord_flip() + theme_bw() + theme(axis.title.y = element_blank())
+```
+
+&lt;img src="figs/Lec16/unnamed-chunk-9-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+### Useful to display MDS plot with dendrogram side-by-side
+
+&lt;img src="figs/Lec16/unnamed-chunk-10-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## How do we assign cluster labels?
+
+#### We cut the dendrogram to return cluster labels
+
+Two ways to specify how to cut the tree using the `cutree` function:
+
+1) via the height using `h`, e.g., cut the tree at height = 10
+
+
+```r
+cutree(hc_complete, h = 10)
+```
+
+--
+
+2) via the desired number of clusters `k` - and let the computer figure out the height for us, e.g., `k = 2`
+
+
+```r
+cutree(hc_complete, h = 2)
+```
+
+
+---
+
+
+```r
+mcu_clusters &lt;- cutree(hc_complete, h = 10)
+mcu_clusters
+```
+
+```
+##                           Ant-Man                Ant-Man &amp; The Wasp 
+##                                 1                                 1 
+##           Avengers: Age of Ultron                Avengers: End Game 
+##                                 1                                 2 
+##            Avengers: Infinity War                     Black Panther 
+##                                 2                                 2 
+##                   Black Panther 2                       Black Widow 
+##                                 1                                 1 
+##                   Captain America        Captain America: Civil War 
+##                                 1                                 1 
+##   Captain America: Winter Soldier                    Captain Marvel 
+##                                 1                                 2 
+##                        Dr Strange Dr Strange: Multiverse of Madness 
+##                                 1                                 1 
+##                          Eternals           Guardians of the Galaxy 
+##                                 1                                 1 
+##         Guardians of the Galaxy 2                   Incredible Hulk 
+##                                 1                                 1 
+##                          Iron Man                        Iron Man 2 
+##                                 1                                 1 
+##                        Iron Man 3                         Shang-Chi 
+##                                 1                                 1 
+##         Spider-Man: Far from Home            Spider-Man: Homecoming 
+##                                 1                                 1 
+##           Spider-Man: No Way Home                      The Avengers 
+##                                 2                                 2 
+##                  Thor: Dark World              Thor: Love &amp; Thunder 
+##                                 1                                 1 
+##                    Thor: Ragnarok                              Thor 
+##                                 1                                 1
+```
+
+
+---
+
+### View results with cut on dendrogram
+
+&lt;img src="figs/Lec16/unnamed-chunk-14-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+### [`factoextra` package](https://rpkgs.datanovia.com/factoextra/index.html) version
+
+
+```r
+library(factoextra)
+fviz_dend(hc_complete, cex = 0.5, k = 3, color_labels_by_k = TRUE)
+```
+
+&lt;img src="figs/Lec16/unnamed-chunk-15-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+
+## Main Takeaways
+
+#### Dendrograms are a great way to visualize distances and the clustering structure in the dataset
+
+#### However there are several decisions to be made! 
+
+#### What type of linkage is appropriate for the problem? 
+
+#### How do we [choose the number of clusters](https://www.datanovia.com/en/lessons/determining-the-optimal-number-of-clusters-3-must-know-methods/)? 
+
+_There is NOT a one size fits all solution to any of this!_
+
+--
+
++ __HW5 is due TONIGHT!__
+
++ __Graphics critique due April 7th!__
+
++ Review more code in Lecture 16 Demo! 
+
+
+#### Next time: PCA
+
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
