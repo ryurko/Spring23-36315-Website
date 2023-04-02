@@ -1,0 +1,791 @@
+---
+title: "36-315 Lecture 18"
+subtitle: "More PCA + Visualizations and Inference for Spatial Data"  
+author: 
+  - "Professor Ron Yurko"
+date: '4/3/2023'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE,
+  fig.path = "figs/lec18/"
+)
+
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#c41230",
+  secondary_color = "#0277BD",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+starbucks <- 
+  read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-12-21/starbucks.csv") %>%
+  # Convert columns to numeric that were saved as character
+  mutate(trans_fat_g = as.numeric(trans_fat_g), fiber_g = as.numeric(fiber_g))
+
+```
+
+
+
+## Principal Component Analysis (PCA)
+
+$$
+\begin{pmatrix}
+& & \text{really} & & \\
+& & \text{wide} & & \\
+& & \text{matrix} & &
+\end{pmatrix}
+\rightarrow \text{matrix algebra stuff} \rightarrow 
+\begin{pmatrix}
+\text{much}  \\
+\text{thinner}  \\
+\text{matrix} 
+\end{pmatrix}
+$$
+
+- Start with $n \times p$ matrix of __correlated__ variables $\rightarrow$ $n \times k$ matrix of __uncorrelated__ variables
+
+- Each of the $k$ columns in the right-hand matrix are __principal components__, all uncorrelated with each other
+
+- First column accounts for most variation in the data, second column for second-most variation, and so on
+
+#### Intuition: first few principal components account for most of the variation in the data
+
+
+---
+
+## So what do we do with the principal components?
+
+__The point__: given a dataset with $p$ variables, we can find $k$ variables $(k << p)$ that account for most of the variation in the data
+
+
+Note that the principal components are NOT easy to interpret - these are combinations of all variables
+
+PCA is similar to MDS with these main differences:
+
+1. MDS reduces a _distance_ matrix while PCA reduces a _data_ matrix
+
+2. PCA has a principled way to choose $k$
+
+3. Can visualize how the principal components are related to variables in data
+
+---
+
+## Working with PCA on Starbucks drinks
+
+Use the `prcomp()` function (based on SVD) for PCA on __centered__ and __scaled__ data
+
+```{r}
+starbucks_pca <- prcomp(dplyr::select(starbucks, serv_size_m_l:caffeine_mg), #<<
+                        center = TRUE, scale. = TRUE) #<<
+summary(starbucks_pca)
+```
+
+---
+
+## Computing Principal Components
+
+Extract the matrix of principal components $\boldsymbol{Z} = XV$ (dimension of $\boldsymbol{Z}$ will match original data)
+
+```{r}
+starbucks_pc_matrix <- starbucks_pca$x
+head(starbucks_pc_matrix)
+```
+
+Columns are uncorrelated, such that Var( $Z_1$ ) $>$ Var( $Z_2$ ) $> \dots >$ Var( $Z_p$ ) - can start with a scatterplot of $Z_1, Z_2$
+
+---
+
+## Starbucks drinks: PC1 and PC2
+
+.pull-left[
+```{r pca-plot, eval = FALSE}
+starbucks <- starbucks %>%
+  mutate(pc1 = starbucks_pc_matrix[,1], 
+         pc2 = starbucks_pc_matrix[,2])
+starbucks %>%
+  ggplot(aes(x = pc1, y = pc2)) +
+  geom_point(alpha = 0.5) +
+  labs(x = "PC 1", y = "PC 2")
+```
+
+- __Look familiar?__
+
+- Principal components are not interpretable, but we can add a __biplot__ with arrows showing the linear relationship between one variable and other variables
+
+]
+
+.pull-right[
+```{r ref.label="pca-plot", echo = FALSE, fig.height=7}
+```
+
+]
+
+---
+
+## Making PCs interpretable with biplots ([`factoextra`](http://www.sthda.com/english/wiki/factoextra-r-package-easy-multivariate-data-analyses-and-elegant-visualization))
+
+.pull-left[
+
+
+```{r pca-biplot, eval = FALSE}
+library(factoextra)
+# Designate to only label the variables:
+fviz_pca_biplot( #<<
+  starbucks_pca, label = "var", #<<
+  # Change the alpha for observations 
+  # which is represented by ind
+  alpha.ind = .25,
+  # Modify the alpha for variables (var):
+  alpha.var = .75,
+  col.var = "darkblue")
+```
+
+- Arrow direction: "as the variable increases..."
+
+- Arrow angles: correlation
+
+  - 90 degrees means uncorrelated
+  - $< 90$ means positively correlated
+  - $> 90$ means negatively correlated
+  
+- Arrow length: strength of relationship with PCs
+
+]
+.pull-right[
+```{r ref.label = "pca-biplot", echo = FALSE, fig.height=8}
+
+```
+
+]
+
+---
+
+## How many principal components to use?
+
+#### Intuition: Additional principal components will add smaller and smaller variance
+
+- Keep adding components until the added variance _drops off_
+
+```{r}
+summary(starbucks_pca)
+```
+
+---
+
+## Create scree plot (aka "elbow plot") to choose
+
+```{r scree-plot, eval = TRUE, fig.align='center', out.width="80%"}
+fviz_eig(starbucks_pca, addlabels = TRUE) + #<<
+  geom_hline(yintercept = 100 * (1 / ncol(starbucks_pca$x)), linetype = "dashed", color = "darkred")
+```
+
+- Number of dimensions on x-axis, proportion of variance on y-axis
+
+- _Rule of thumb_: horizontal line at $1/p$ (__Why?__)
+
+---
+
+## Main Takeaways
+
+#### It's really hard to visualize many dimensions at the same time
+
+- Often, it makes a lot of sense to choose 2-4 of the "most important dimensions" and just plot those
+
+#### PCA is a very common way to define "most important dimensions"
+
+#### PCA provides the linear combinations of variables that capture the most variation in the data.
+
+#### Common to plot the first two principal components in a scatterplot, and see if subjects cluster based on other variables (similar to MDS)
+
+#### Especially useful to plot principal components with a biplot (e.g., with `factoextra`)
+
+- Adds interpretability to the principal components, and helps you see relationships among the variables
+
+
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+airports <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat",
+                     col_names = c("ID", "name", "city", "country", "IATA_FAA", 
+                                   "ICAO", "lat", "lon", "altitude", "timezone", "DST"))
+
+routes <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/routes.dat",
+                   col_names = c("airline", "airlineID", "sourceAirport", 
+                                 "sourceAirportID", "destinationAirport", 
+                                 "destinationAirportID", "codeshare", "stops",
+                                 "equipment"))
+
+departures <- routes %>% 
+  group_by(sourceAirportID) %>%
+  summarize(n_depart = n()) %>%
+  mutate(sourceAirportID = as.integer(sourceAirportID))
+
+arrivals <- routes %>% 
+  group_by(destinationAirportID) %>% 
+  summarize(n_arrive = n()) %>% 
+  mutate(destinationAirportID = as.integer(destinationAirportID))
+
+airports <- airports %>%
+  left_join(departures, by = c("ID" = "sourceAirportID"))
+airports <- airports %>%
+  left_join(arrivals, by = c("ID" = "destinationAirportID"))
+```
+
+
+# How should we think about spatial data?
+
+- Typically location is measured with __latitude__ / __longitude__ (2D)
+
+- __Latitude__: Measures North / South (the "y-axis")
+
+  - Range is $(-90^{\circ}, 90^{\circ})$
+  
+  - Measures degrees from the equator $(0^{\circ})$
+  
+  - $(-90^{\circ}, 0^{\circ})$ = southern hemisphere 
+  
+  - $(0^{\circ}, 90^{\circ})$ = northern hemisphere 
+  
+--
+
+- __Longitude__: Measures East/West (the "x-axis")
+
+  - Range is $(-180^{\circ}, 180^{\circ})$
+  
+  - Measures degrees from the prime meridian $(0^{\circ})$ in Greenwich, England
+  
+  - $(-180^{\circ}, 0^{\circ})$ = eastern hemisphere
+  
+  - $(0^{\circ}, 180^{\circ})$ = western hemisphere
+
+
+---
+
+# Latitude and Longitude
+
+
+```{r, echo = FALSE, fig.align='center', out.width="80%"}
+knitr::include_graphics("https://c.tadst.com/gfx/1200x630/longitude-and-latitude-simple.png?1")
+```
+
+---
+
+# Map Projections
+
+- Earth is a 3D object, but maps are 2D objects
+
+- __Map projections__: Transformation of the lat / long coordinates on a sphere (the earth) to a 2D plane
+  
+- There are many different projections - each will distort the map in different ways.
+
+- The most common projections are:
+
+  - [Mercator](https://en.wikipedia.org/wiki/Mercator_projection)
+  - [Robinson](https://en.wikipedia.org/wiki/Robinson_projection)
+  - [Conic](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Conic%20projections.htm#:~:text=Conic%20projections%20are%20created%20by,a%20developable%20map%20projection%20surface.)
+  - [Cylindrical](https://en.wikipedia.org/wiki/Map_projection#Cylindrical)
+  - [Planar](http://www.geo.hunter.cuny.edu/~jochen/gtech201/lectures/lec6concepts/Map%20coordinate%20systems/Planar%20projections.htm)
+  - [Interrupted projections](https://en.wikipedia.org/wiki/Interruption_(map_projection))
+
+
+---
+
+# Mercator Projection (1500s)
+
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/73/Mercator_projection_Square.JPG/700px-Mercator_projection_Square.JPG")
+```
+
+
+---
+
+# Mercator Projection (Tissot indicatrix)
+
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Mercator_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
+```
+
+
+---
+
+# Robinson Projection (Standard from 1963-1998)
+
+```{r, echo = FALSE, fig.align='center', out.width="70%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/9/96/Robinson_projection_SW.jpg/700px-Robinson_projection_SW.jpg")
+```
+
+
+---
+
+# Robinson Projection (Tissot indicatrix)
+
+
+```{r, echo = FALSE, fig.align='center', out.width="70%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/7/7a/Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg/700px-Robinson_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
+```
+
+
+---
+
+# Winkel Tripel Projection (proposed 1921, now the standard)
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/9/91/Winkel_triple_projection_SW.jpg/660px-Winkel_triple_projection_SW.jpg")
+```
+
+---
+
+# Winkel Tripel Projection (Tissot indicatrix)
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://upload.wikimedia.org/wikipedia/commons/thumb/3/36/Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg/660px-Winkel_Tripel_with_Tissot%27s_Indicatrices_of_Distortion.svg.png")
+```
+
+---
+
+# And many more... (see [xkcd comic](https://xkcd.com/977/))
+
+```{r, echo = FALSE, fig.align='center', out.width="60%"}
+knitr::include_graphics("https://i.pinimg.com/originals/2d/03/cf/2d03cffa216afb23fa50fb07fc1221b1.jpg")
+```
+
+
+---
+
+## Visualizing spatial data on maps using [`ggmap`](https://cran.r-project.org/web/packages/ggmap/readme/README.html)
+
+.pull-left[
+
+```{r us-map, eval = FALSE}
+library(ggmap)
+# First, we'll draw a "box" around the US
+# (in terms of latitude and longitude)
+US <- c(left = -125, bottom = 10, 
+        right = -67, top = 49)
+map <- get_stamenmap(US, zoom = 5, 
+                     maptype = "toner-lite")
+
+# Visualize the basic map
+ggmap(map) #<<
+
+```
+
+- Draw map based on lat / lon coordinates
+
+- Put the box into `get_stamenmap()` to access [Stamen Maps](http://maps.stamen.com/#terrain/12/37.7706/-122.3782)
+
+- Draw the map using `ggmap()` to serve as base
+
+]
+
+.pull-right[
+```{r ref.label="us-map", echo = FALSE, fig.height=7}
+
+```
+
+]
+
+---
+
+# Three main types of spatial data
+
+
+1. __Point Pattern Data__: lat-long coordinates where events have occurred
+
+2. __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates.
+
+3. __Areal Data__: Geographic regions with one or more variables associated with those regions.
+
+--
+
+- Each type is structured differently within a dataset
+
+- Each type requires a different kind of graph(s)
+
+--
+
+We're going to review each type of data. Then, we're going to demonstrate how to plot these different data types
+
++ __Today: Point-referenced and point pattern__
+
++ Wednesday: Areal data
+
+---
+
+# Point-Pattern data
+
+- __Point Pattern Data__: lat-long coordinates where events have occurred
+
+- __Point pattern data simply records the lat-long of events__; thus, there are only two columns
+
+- Again, latitude and longitude are represented with dots, sometimes called a dot or bubble map.
+
+--
+
+- The goal is to understand how the __density__ of events varies across space
+
+- The density of the dots can also be visualized (e.g., with contours)
+
+  - __Use methods we've discussed before for visualizing 2D joint distribution__
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', out.width = "80%"}
+knitr::include_graphics("https://static01.nyt.com/images/2020/09/10/learning/TotalCovidMap-LN/TotalCovidMap-LN-superJumbo.png?quality=75&auto=webp")
+```
+
+
+---
+
+# Point-Referenced data
+
+- __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates
+
+- Point-referenced data will have the following form:
+
+```{r}
+airports %>% dplyr::select(lat, lon, altitude, n_depart, n_arrive, name) %>% slice(1:3)
+```
+
+--
+
+- The goal is to understand how the variable(s) (e.g., `altitude`) vary across different spatial locations
+
+- Typically, the latitude and longitude are represented with dots, and the variable(s) are represented with size and/or colors
+
+---
+
+## Adding points to the map as usual
+
+.pull-left[
+
+```{r airport-points, eval = FALSE}
+ggmap(map) +
+  geom_point(data = airports, #<<
+             aes(x = lon, y = lat),
+             alpha = 0.25)
+```
+
+- Display locations of airports using `geom_point()` layer, need to specify `data` for layer
+
+- Currently viewing __point-pattern__ data 
+
+]
+
+.pull-right[
+```{r ref.label="airport-points", echo = FALSE, fig.height=7}
+
+```
+
+]
+
+
+---
+
+## Altering points on the map (in the usual way)
+
+.pull-left[
+
+```{r airport-points-plus, eval = FALSE}
+ggmap(map) +
+  geom_point(data = airports, 
+             aes(x = lon, y = lat, 
+                 size = sqrt(n_depart), #<<
+                 color = sqrt(n_arrive)), #<<
+             alpha = .5) +
+  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
+                  labels = c(1, 5, 10, 50, 100, 500), 
+                  name = "# departures") +
+  scale_color_distiller(palette = "Spectral") +
+  labs(color = "sqrt(# arrivals)") +
+  theme(legend.position = "bottom")
+```
+
+
+- Displaying additional variables through `aes`
+
+
+]
+
+.pull-right[
+```{r ref.label="airport-points-plus", echo = FALSE, fig.height=7}
+
+```
+
+]
+
+---
+
+## Inference for Spatial Data
+
+
+There are whole courses, textbooks, and careers dedicated to this. We're not going to learn everything!
+
+
+However, there are some straightforward analyses that can be done for spatial data.
+
+We're going to focus on point-referenced (today) and areal data (Wednesday).
+
+
+#### Point-Referenced Data
+
++ Divide geography into clusters (e.g., north/south/east/west) and use ANOVA to test if there are significant differences.
+
++ Regression of $\text{outcome} \sim \text{latitude} + \text{longitude}$. Smoothing regression (e.g., loess) is particularly useful here.
+
+---
+
+### Visualizations and Inference for Point-Reference Data
+
+For basic linear regression:
+
+1. Plot $(x, y)$ as points
+
+2. Fit the regression model $y \sim x$, to give us  $\hat{y} = \hat{\beta}_0 + \hat{\beta}_1 \cdot x$
+
+3. Plot $(x, \hat{y})$ as a line
+
+--
+
+For point reference data, we have the following variables:
+
++ longitude: $x$
+
++ latitude: $y$
+
++ Outcome variable: $z$
+
+Consider the following linear regression model: $z \sim \text{lat} + \text{long}$
+
+Goal: Make a visual involving $(\text{long}, \text{lat}, \hat{z})$, and possibly $z$.
+
++ This is indeed the linear regression equivalent, which plots $(x,y, \hat{y})$
+
+---
+
+## Kriging
+
+Goal: Make a visual involving (long, lat, $\hat{z}$) and possibly $z$
+
+Want $\hat{z}$ for many (long, lat) combos (not just the observed one!)
+
+To do this, follow this procedure:
+
+1. Fit the model $z \sim \text{lat} + \text{long}$
+
+2. Create a grid of $(\text{long}, \text{lat})_{ij}$
+
+3. Generate $\hat{z}_{ij}$ for each $(\text{long}, \text{lat})_{ij}$
+
+4. Plot a heat map or contour plot of (long, lat, $\hat{z}$)
+
++ You can also add the actual $z$ values (e.g., via size) on the heat map
+
+#### This is known as _kriging_, or _spatial interpolation_
+
+---
+
+## Kriging: airline data example
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+airports_subset <- airports %>%
+  filter(lat >= 10 & lat <= 49 & lon >= -125 & lon <= -67)
+ggmap(map) +
+  geom_point(data = airports_subset, 
+             aes(x = lon, y = lat, 
+                 size = sqrt(n_depart)), #<<
+             alpha = .5) +
+  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
+                  labels = c(expression(sqrt(1)), expression(sqrt(5)), 
+                             expression(sqrt(10)), expression(sqrt(50)),
+                             expression(sqrt(100)), expression(sqrt(500)))) +
+  labs(size = "sqrt(# departures)") +
+  theme(legend.title = element_text(size = 8))
+```
+
+---
+
+## Kriging: creating the map
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) 
+```
+
+
+---
+
+## Kriging: generating the grid
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+
+
+loess_model <- loess(sqrt(n_depart) ~ lon * lat, data = airports_subset,
+                     control = loess.control(surface = "direct"))
+
+# Now we'll predict what the sqrt(n_depart) is for a grid of lat/long points.
+# This code creates a sequence of latitude and longitude points where
+# we want to predict/estimate what sqrt(n_depart) is:
+lat_grid <- seq(10, 49, by = 1)
+lon_grid <- seq(-125, -67, by = 2)
+
+# the following line creates a grid of the lat and long coordinates
+# (To better understand what this line is doing, it'd be helpful to
+# look at the help documentation for expand.grid, which is often used
+# in computational statistics. Note we named the columns to match the 
+# ones used for the model.)
+lonlat_grid <- expand.grid("lon" = lon_grid, 
+                           "lat" = lat_grid,
+                           # NOTE: We use the following input when using a 
+                           # grid input for the loess model - this ensures
+                           # that the predictions we get will be returned in 
+                           # a long column versus a grid (see what happens when
+                           # you comment out the following line for yourself)
+                           KEEP.OUT.ATTRS = FALSE)
+
+# predicted values of sqrt(n_depart) along the grid
+loess_pred <- predict(loess_model, lonlat_grid)
+
+# Now we need to attach these predicted values to the grid of points that we created earlier:
+loess_pred_tbl <- lonlat_grid %>%
+  # Convert to tibble:
+  as_tibble() %>%
+  # Add this column:
+  mutate(pred_n_depart = loess_pred)
+
+
+ggmap(map) +
+  geom_point(data = loess_pred_tbl, 
+             aes(x = lon, y = lat)) 
+```
+
+---
+
+
+## Kriging: generating predicted values
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) +
+  geom_point(data = loess_pred_tbl, 
+             aes(x = lon, y = lat, 
+                 color = loess_pred)) +
+  scale_color_distiller(palette = "Spectral") +
+  labs(color = "Estimated sqrt(# flights)") +
+  theme(legend.title = element_text(size = 8))
+```
+
+
+
+---
+
+## Kriging: plotting heat map of predicted values
+
+
+```{r final-kriging, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) +
+  geom_point(data = airports, 
+             aes(x = lon, y = lat, size = sqrt(n_depart)), 
+             alpha = .5) +
+  geom_contour_filled(data = loess_pred_tbl, binwidth = 1,
+                      aes(x = lon, y = lat, z = loess_pred, 
+                          color = after_stat(level)),
+                      alpha = 0.2) +
+  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
+                  labels = c(expression(sqrt(1)), expression(sqrt(5)), 
+                             expression(sqrt(10)), expression(sqrt(50)),
+                             expression(sqrt(100)), expression(sqrt(500)))) +
+  labs(size = "sqrt(# departures)", 
+       color = "level", fill = "level") +
+  theme(legend.title = element_text(size = 8))
+```
+
+
+---
+
+## Lecture 18 Demo - Kriging
+
+.pull-left[
+
+The steps used to create this map are...
+
+1. Fit an interactive regression model using `loess()`
+
+2. Make a grid of lat/long coordinates, using `seq()` and `expand.grid()`
+
+3. Get estimated outcomes across the grid using `predict()`
+
+4. Use `geom_contour_filled()` to color map by estimated outcomes
+
+]
+
+.pull-right[
+
+```{r, ref.label="final-kriging", fig.height=6, echo = FALSE}
+
+```
+
+
+]
+
+
+---
+
+## Main Takeaways
+
+#### Spatial data is most commonly encoded in a 2D plane (latitude/longitude), i.e., maps
+
+#### Decisions to make: what projection to use? do we need all specific geolocations, or just general areas (e.g., states)?
+
+#### What kind of data do we have?
+
+* Point pattern: Scatterplots with density contours.
+
+* Point-referenced: Scatterplots with color/size, use regression/loess for inference.
+
+* Areal: See Wednesday...
+
+#### Helpful to think carefully about the kind of data structure you need before starting to make visualizations
+
+--
+
++ __HW7 is due Wednesday April 5th!__
+
++ __Graphics critique due April 7th!__
+
++ Review more code in Lecture 18 Demo! 
+
+
+#### Next time: Areal data
