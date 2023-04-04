@@ -1,0 +1,651 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>36-315 Lecture 19</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Professor Ron Yurko" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# 36-315 Lecture 19
+]
+.subtitle[
+## Visualizations and Inference for Areal Data
+]
+.author[
+### Professor Ron Yurko
+]
+.date[
+### 4/5/2023
+]
+
+---
+
+
+
+
+
+
+
+
+
+
+## Conceptual Review
+
+Last class: Three main types of spatial data
+
+
+1. __Point Pattern Data__: lat-long coordinates where events have occurred
+
+2. __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates.
+
+3. __Areal Data__: Geographic regions with one or more variables associated with those regions.
+
+Walked through how to plot point-referenced and point pattern data.
+
+Roadmap for today:
+
++ Finish discussing inference for point-referenced data
+
++ How to plot areal data
+
++ Visualizing inference for areal data
+
+---
+
+
+
+
+# Point-Referenced data
+
+- __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates
+
+- Point-referenced data will have the following form:
+
+
+```r
+airports %&gt;% dplyr::select(lat, lon, altitude, n_depart, n_arrive, name) %&gt;% slice(1:3)
+```
+
+```
+## # A tibble: 3 × 6
+##     lat   lon altitude n_depart n_arrive name                        
+##   &lt;dbl&gt; &lt;dbl&gt;    &lt;dbl&gt;    &lt;int&gt;    &lt;int&gt; &lt;chr&gt;                       
+## 1 -6.08  145.     5282        5        5 Goroka Airport              
+## 2 -5.21  146.       20        8        8 Madang Airport              
+## 3 -5.83  144.     5388       10       12 Mount Hagen Kagamuga Airport
+```
+
+--
+
+- The goal is to understand how the variable(s) (e.g., `altitude`) vary across different spatial locations
+
+- Typically, the latitude and longitude are represented with dots, and the variable(s) are represented with size and/or colors
+
+
+---
+
+## Kriging
+
+Goal: Make a visual involving (long, lat, `\(\hat{z}\)`) and possibly `\(z\)`
+
+Want `\(\hat{z}\)` for many (long, lat) combos (not just the observed one!)
+
+To do this, follow this procedure:
+
+1. Fit the model `\(z \sim \text{lat} + \text{long}\)`
+
+2. Create a grid of `\((\text{long}, \text{lat})_{ij}\)`
+
+3. Generate `\(\hat{z}_{ij}\)` for each `\((\text{long}, \text{lat})_{ij}\)`
+
+4. Plot a heat map or contour plot of (long, lat, `\(\hat{z}\)`)
+
++ You can also add the actual `\(z\)` values (e.g., via size) on the heat map
+
+#### This is known as _kriging_, or _spatial interpolation_
+
+---
+
+## Kriging: airline data example
+
+
+&lt;img src="figs/Lec19/unnamed-chunk-4-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## Kriging: creating the map
+
+&lt;img src="figs/Lec19/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Kriging: generating the grid
+
+
+&lt;img src="figs/Lec19/unnamed-chunk-6-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+
+## Kriging: generating predicted values
+
+
+&lt;img src="figs/Lec19/unnamed-chunk-7-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+
+---
+
+## Kriging: plotting heat map of predicted values
+
+
+&lt;img src="figs/Lec19/final-kriging-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Lecture 18 Demo - Kriging
+
+.pull-left[
+
+The steps used to create this map are...
+
+1. Fit an interactive regression model using `loess()`
+
+2. Make a grid of lat/long coordinates, using `seq()` and `expand.grid()`
+
+3. Get estimated outcomes across the grid using `predict()`
+
+4. Use `geom_contour_filled()` to color map by estimated outcomes
+
+]
+
+.pull-right[
+
+&lt;img src="figs/Lec19/unnamed-chunk-8-1.png" width="100%" /&gt;
+
+
+]
+
+
+
+---
+
+## Thinking about areal data
+
+- __Areal Data__: Geographic regions associated with one or more variables specific to those regions
+
+- Areal data will have the following form (example US states data from 1970s):
+
+
+
+
+```r
+state_data %&gt;% dplyr::slice(1:3)
+```
+
+```
+## # A tibble: 3 × 9
+##   Population Income Illiteracy `Life Exp` Murder `HS Grad` Frost   Area state  
+##        &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;  
+## 1       3615   3624        2.1       69.0   15.1      41.3    20  50708 alabama
+## 2        365   6315        1.5       69.3   11.3      66.7   152 566432 alaska 
+## 3       2212   4530        1.8       70.6    7.8      58.1    15 113417 arizona
+```
+
+
+--
+
+- Need to match the region with the actual geographic boundaries
+
+- Many geographic boundaries/features are stored as "shapefiles"
+
+  - i.e., complicated polygons
+  
+- Can contain the lines, points, etc. to represent any geographic feature
+
+- Shapefiles are readily available for countries, states, counties, etc.
+
+
+---
+
+### Typical workflow for plotting areal data (e.g., using states)
+
+1. Get state-specific data
+
+  + e.g., you are working with a dataset that contains information at the state level
+  
+2. Get state boundaries
+
+  + Access shapefiles using `map_data()` 
+  
+3. Merge state-specific data with state boundaries (using `left_join()`)
+
+  + Using `left_join()` or `merge` 
+  
+
+4. Plot the data!
+
+  + Create choropleths displaying regions colored by variable of interest
+  
+
+---
+
+## Get state-specific data...
+
+
+```r
+head(state_data)
+```
+
+```
+## # A tibble: 6 × 9
+##   Population Income Illiteracy `Life Exp` Murder `HS Grad` Frost   Area state   
+##        &lt;dbl&gt;  &lt;dbl&gt;      &lt;dbl&gt;      &lt;dbl&gt;  &lt;dbl&gt;     &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;chr&gt;   
+## 1       3615   3624        2.1       69.0   15.1      41.3    20  50708 alabama 
+## 2        365   6315        1.5       69.3   11.3      66.7   152 566432 alaska  
+## 3       2212   4530        1.8       70.6    7.8      58.1    15 113417 arizona 
+## 4       2110   3378        1.9       70.7   10.1      39.9    65  51945 arkansas
+## 5      21198   5114        1.1       71.7   10.3      62.6    20 156361 califor…
+## 6       2541   4884        0.7       72.1    6.8      63.9   166 103766 colorado
+```
+
+
+
+---
+
+## Access shapefiles using `map_data()` 
+
+
+
+```r
+library(maps)
+state_borders &lt;- map_data("state") 
+head(state_borders)
+```
+
+```
+##        long      lat group order  region subregion
+## 1 -87.46201 30.38968     1     1 alabama      &lt;NA&gt;
+## 2 -87.48493 30.37249     1     2 alabama      &lt;NA&gt;
+## 3 -87.52503 30.37249     1     3 alabama      &lt;NA&gt;
+## 4 -87.53076 30.33239     1     4 alabama      &lt;NA&gt;
+## 5 -87.57087 30.32665     1     5 alabama      &lt;NA&gt;
+## 6 -87.58806 30.32665     1     6 alabama      &lt;NA&gt;
+```
+
+- For example: `map_data("world")`, `map_data("state")`, `map_data("county")` (need to install [`maps` package](https://cran.r-project.org/web/packages/maps/maps.pdf))
+
+- Contains lat/lon coordinates to draw geographic boundaries
+
+
+---
+
+## Merge state-specific data with state boundaries
+
+
+```r
+state_plot_data &lt;- state_borders %&gt;%
+* left_join(state_data,
+*           by = c("region" = "state"))
+```
+
+
+--
+
+What it looks like after merging:
+
+
+```r
+head(state_plot_data)
+```
+
+```
+##        long      lat group order  region subregion Population Income Illiteracy
+## 1 -87.46201 30.38968     1     1 alabama      &lt;NA&gt;       3615   3624        2.1
+## 2 -87.48493 30.37249     1     2 alabama      &lt;NA&gt;       3615   3624        2.1
+## 3 -87.52503 30.37249     1     3 alabama      &lt;NA&gt;       3615   3624        2.1
+## 4 -87.53076 30.33239     1     4 alabama      &lt;NA&gt;       3615   3624        2.1
+## 5 -87.57087 30.32665     1     5 alabama      &lt;NA&gt;       3615   3624        2.1
+## 6 -87.58806 30.32665     1     6 alabama      &lt;NA&gt;       3615   3624        2.1
+##   Life Exp Murder HS Grad Frost  Area
+## 1    69.05   15.1    41.3    20 50708
+## 2    69.05   15.1    41.3    20 50708
+## 3    69.05   15.1    41.3    20 50708
+## 4    69.05   15.1    41.3    20 50708
+## 5    69.05   15.1    41.3    20 50708
+## 6    69.05   15.1    41.3    20 50708
+```
+
+
+---
+
+## Create a choropleth map with `geom_polygon()`
+
+.pull-left[
+
+
+```r
+state_plot_data %&gt;%
+  ggplot() + 
+  geom_polygon(aes(x = long, y = lat, 
+                   group = group,
+                   fill = Illiteracy), 
+               color = "black") + 
+  scale_fill_gradient2(
+    low = "darkgreen",
+    mid = "lightgrey", 
+    high = "darkorchid4",
+    midpoint = 0.95) +
+  theme_void() +
+  coord_map("polyconic") + 
+  labs(fill = "Illiteracy %") + 
+  theme(legend.position = "bottom")
+```
+
+
+]
+.pull-right[
+&lt;img src="figs/Lec19/unnamed-chunk-15-1.png" width="100%" /&gt;
+
+]
+
+---
+
+## Uniform size with [`statebins`](https://github.com/hrbrmstr/statebins)
+
+.pull-left[
+
+
+```r
+library(statebins)
+state_data$new_state &lt;- 
+  str_to_title(state_data$state)
+*statebins(state_data = state_data,
+          state_col = "new_state",
+          value_col = "Illiteracy") +
+  theme_statebins()
+```
+
+- Make all states equal in size
+
+- Keeps spatial arrangement but focus is on the variable of interest displayed by the color
+
+]
+
+.pull-right[
+&lt;img src="figs/Lec19/unnamed-chunk-16-1.png" width="100%" /&gt;
+
+]
+
+
+---
+
+## Inference for Areal Data
+
+For areal data, we have the following variables:
+
++ Geographic region: `\(g\)`
+
++ Outcome variable: `\(z\)`
+
+--
+
+`\(g\)` is categorical, so visualization/inference involves categorical data.
+
+If `\(g\)` only has a few categories, can just do ANOVA and side-by-side violins (or other displays we've talked about).
+
+#### What to do if there are many regions?
+
+Two approaches: Dendrograms and randomization tests.
+
+---
+
+## Dendrograms for Areal Data
+
+#### Recall: Dendrograms allow you to see which subjects are _similar_ and which are _dissimilar_ in terms of one or more variables
+
+Intuition: Allows you to see which geographic regions are similar
+
+--
+
+To create a dendrogram:
+
+1. Define a distance metric in terms of the outcome.
+
+2. Plot a dendrogram.
+
+3. Make the leaf labels correspond to geographic regions.
+
+---
+
+&lt;img src="figs/Lec19/unnamed-chunk-17-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Visual Randomization Tests
+
+So, we wanted to see if illiteracy rates depended on geography...
+
+#### Consider the null hypothesis: Illiteracy doesn't depend on geography
+
++ If the null hypothesis is true, what are the chances that our map just happened by chance?
+
+--
+
+Important to ponder, because humans are very tempted to see patterns in maps that aren't actually there...
+
+&lt;img src="https://external-preview.redd.it/mNnevchKG3-dc3hadYi43sYB9GetG4B3ZwFe3EHr8w8.jpg?auto=webp&amp;s=cf3c3d4f1f3213dee49381e7055d1e6bf9660d81" width="45%" style="display: block; margin: auto;" /&gt;
+
+
+#### How do we know the spatial pattern we're seeing is really a pattern and not just random noise?
+
+---
+
+## Visual Randomization Tests
+
+#### Consider the null hypothesis: Illiteracy doesn't depend on geography
+
++ If the null hypothesis is true, what are the chances that our map just happened by chance?
+
+--
+
+#### Randomization Test:
+
+1. Plot areal map with the actual outcomes.
+
+2. Shuffle the outcomes across geographic regions several times.
+
+3. Plot several __shuffled__ areal maps.
+
+4. Show someone the __true__ areal map among the __shuffled__ areal maps in a random order... Can they pick out the real one?
+
+--
+
+#### If so, then the map is _significantly non-random_ in terms of geography
+
+---
+
+## Can you spot the real map?
+
+&lt;img src="figs/Lec19/unnamed-chunk-19-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Main Takeaways
+
+#### Create choropleths for areal data: color regions by variable of interest
+
++ Requires workflow to join region level data with polygon boundaries for regions
+
+#### Can perform classical type categorical type inference 
+
+#### Use dendrograms to visualize differences between regions based on variable of interest
+
+#### Can perform visual randomization test to test signficance of observed data
+
++ _Is it practical though?_
+
+--
+
+__HW7 is due TONIGHT AND Graphics Critique due FRIDAY!__
+
+Review more code in Lecture 19 Demo! 
+
+Recommended reading: 
+
++ [CW Chapter 15 Visualizing geospatial data](https://clauswilke.com/dataviz/geospatial-data.html)
+
++ [KH Chapter 7 Draw Maps](https://socviz.co/maps.html#maps)
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

@@ -1,0 +1,665 @@
+---
+title: "36-315 Lecture 19"
+subtitle: "Visualizations and Inference for Areal Data"  
+author: 
+  - "Professor Ron Yurko"
+date: '4/5/2023'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE,
+  fig.path = "figs/Lec19/"
+)
+
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#c41230",
+  secondary_color = "#0277BD",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+```
+
+
+## Conceptual Review
+
+Last class: Three main types of spatial data
+
+
+1. __Point Pattern Data__: lat-long coordinates where events have occurred
+
+2. __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates.
+
+3. __Areal Data__: Geographic regions with one or more variables associated with those regions.
+
+Walked through how to plot point-referenced and point pattern data.
+
+Roadmap for today:
+
++ Finish discussing inference for point-referenced data
+
++ How to plot areal data
+
++ Visualizing inference for areal data
+
+---
+
+```{r, include = FALSE}
+library(tidyverse)
+airports <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/airports.dat",
+                     col_names = c("ID", "name", "city", "country", "IATA_FAA", 
+                                   "ICAO", "lat", "lon", "altitude", "timezone", "DST"))
+
+routes <- read_csv("https://raw.githubusercontent.com/jpatokal/openflights/master/data/routes.dat",
+                   col_names = c("airline", "airlineID", "sourceAirport", 
+                                 "sourceAirportID", "destinationAirport", 
+                                 "destinationAirportID", "codeshare", "stops",
+                                 "equipment"))
+
+departures <- routes %>% 
+  group_by(sourceAirportID) %>%
+  summarize(n_depart = n()) %>%
+  mutate(sourceAirportID = as.integer(sourceAirportID))
+
+arrivals <- routes %>% 
+  group_by(destinationAirportID) %>% 
+  summarize(n_arrive = n()) %>% 
+  mutate(destinationAirportID = as.integer(destinationAirportID))
+
+airports <- airports %>%
+  left_join(departures, by = c("ID" = "sourceAirportID"))
+airports <- airports %>%
+  left_join(arrivals, by = c("ID" = "destinationAirportID"))
+
+library(ggmap)
+# First, we'll draw a "box" around the US
+# (in terms of latitude and longitude)
+US <- c(left = -125, bottom = 10, 
+        right = -67, top = 49)
+map <- get_stamenmap(US, zoom = 5, 
+                     maptype = "toner-lite")
+
+```
+
+
+# Point-Referenced data
+
+- __Point-Referenced data__: Latitude-longitude (lat-long) coordinates as well as one or more variables specific to those coordinates
+
+- Point-referenced data will have the following form:
+
+```{r}
+airports %>% dplyr::select(lat, lon, altitude, n_depart, n_arrive, name) %>% slice(1:3)
+```
+
+--
+
+- The goal is to understand how the variable(s) (e.g., `altitude`) vary across different spatial locations
+
+- Typically, the latitude and longitude are represented with dots, and the variable(s) are represented with size and/or colors
+
+
+---
+
+## Kriging
+
+Goal: Make a visual involving (long, lat, $\hat{z}$) and possibly $z$
+
+Want $\hat{z}$ for many (long, lat) combos (not just the observed one!)
+
+To do this, follow this procedure:
+
+1. Fit the model $z \sim \text{lat} + \text{long}$
+
+2. Create a grid of $(\text{long}, \text{lat})_{ij}$
+
+3. Generate $\hat{z}_{ij}$ for each $(\text{long}, \text{lat})_{ij}$
+
+4. Plot a heat map or contour plot of (long, lat, $\hat{z}$)
+
++ You can also add the actual $z$ values (e.g., via size) on the heat map
+
+#### This is known as _kriging_, or _spatial interpolation_
+
+---
+
+## Kriging: airline data example
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+airports_subset <- airports %>%
+  filter(lat >= 10 & lat <= 49 & lon >= -125 & lon <= -67)
+ggmap(map) +
+  geom_point(data = airports_subset, 
+             aes(x = lon, y = lat, 
+                 size = sqrt(n_depart)), #<<
+             alpha = .5) +
+  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
+                  labels = c(expression(sqrt(1)), expression(sqrt(5)), 
+                             expression(sqrt(10)), expression(sqrt(50)),
+                             expression(sqrt(100)), expression(sqrt(500)))) +
+  labs(size = "sqrt(# departures)") +
+  theme(legend.title = element_text(size = 8))
+```
+
+---
+
+## Kriging: creating the map
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) 
+```
+
+
+---
+
+## Kriging: generating the grid
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+
+
+loess_model <- loess(sqrt(n_depart) ~ lon * lat, data = airports_subset,
+                     control = loess.control(surface = "direct"))
+
+# Now we'll predict what the sqrt(n_depart) is for a grid of lat/long points.
+# This code creates a sequence of latitude and longitude points where
+# we want to predict/estimate what sqrt(n_depart) is:
+lat_grid <- seq(10, 49, by = 1)
+lon_grid <- seq(-125, -67, by = 2)
+
+# the following line creates a grid of the lat and long coordinates
+# (To better understand what this line is doing, it'd be helpful to
+# look at the help documentation for expand.grid, which is often used
+# in computational statistics. Note we named the columns to match the 
+# ones used for the model.)
+lonlat_grid <- expand.grid("lon" = lon_grid, 
+                           "lat" = lat_grid,
+                           # NOTE: We use the following input when using a 
+                           # grid input for the loess model - this ensures
+                           # that the predictions we get will be returned in 
+                           # a long column versus a grid (see what happens when
+                           # you comment out the following line for yourself)
+                           KEEP.OUT.ATTRS = FALSE)
+
+# predicted values of sqrt(n_depart) along the grid
+loess_pred <- predict(loess_model, lonlat_grid)
+
+# Now we need to attach these predicted values to the grid of points that we created earlier:
+loess_pred_tbl <- lonlat_grid %>%
+  # Convert to tibble:
+  as_tibble() %>%
+  # Add this column:
+  mutate(pred_n_depart = loess_pred)
+
+
+ggmap(map) +
+  geom_point(data = loess_pred_tbl, 
+             aes(x = lon, y = lat)) 
+```
+
+---
+
+
+## Kriging: generating predicted values
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) +
+  geom_point(data = loess_pred_tbl, 
+             aes(x = lon, y = lat, 
+                 color = loess_pred)) +
+  scale_color_distiller(palette = "Spectral") +
+  labs(color = "Estimated sqrt(# flights)") +
+  theme(legend.title = element_text(size = 8))
+```
+
+
+
+---
+
+## Kriging: plotting heat map of predicted values
+
+
+```{r final-kriging, echo = FALSE, fig.align='center', fig.height=4}
+ggmap(map) +
+  geom_point(data = airports, 
+             aes(x = lon, y = lat, size = sqrt(n_depart)), 
+             alpha = .5) +
+  geom_contour_filled(data = loess_pred_tbl, binwidth = 1,
+                      aes(x = lon, y = lat, z = loess_pred, 
+                          color = after_stat(level)),
+                      alpha = 0.2) +
+  scale_size_area(breaks = sqrt(c(1, 5, 10, 50, 100, 500)), 
+                  labels = c(expression(sqrt(1)), expression(sqrt(5)), 
+                             expression(sqrt(10)), expression(sqrt(50)),
+                             expression(sqrt(100)), expression(sqrt(500)))) +
+  labs(size = "sqrt(# departures)", 
+       color = "level", fill = "level") +
+  theme(legend.title = element_text(size = 8))
+```
+
+
+---
+
+## Lecture 18 Demo - Kriging
+
+.pull-left[
+
+The steps used to create this map are...
+
+1. Fit an interactive regression model using `loess()`
+
+2. Make a grid of lat/long coordinates, using `seq()` and `expand.grid()`
+
+3. Get estimated outcomes across the grid using `predict()`
+
+4. Use `geom_contour_filled()` to color map by estimated outcomes
+
+]
+
+.pull-right[
+
+```{r, ref.label="final-kriging", fig.height=6, echo = FALSE}
+
+```
+
+
+]
+
+
+
+---
+
+## Thinking about areal data
+
+- __Areal Data__: Geographic regions associated with one or more variables specific to those regions
+
+- Areal data will have the following form (example US states data from 1970s):
+
+```{r, echo = FALSE}
+library(datasets)
+state_names <- rownames(state.x77)
+state_data <- as_tibble(state.x77)
+state_data <- state_data %>%
+  mutate(state = state_names) %>%
+  mutate(state = tolower(state))
+```
+
+```{r}
+state_data %>% dplyr::slice(1:3)
+```
+
+
+--
+
+- Need to match the region with the actual geographic boundaries
+
+- Many geographic boundaries/features are stored as "shapefiles"
+
+  - i.e., complicated polygons
+  
+- Can contain the lines, points, etc. to represent any geographic feature
+
+- Shapefiles are readily available for countries, states, counties, etc.
+
+
+---
+
+### Typical workflow for plotting areal data (e.g., using states)
+
+1. Get state-specific data
+
+  + e.g., you are working with a dataset that contains information at the state level
+  
+2. Get state boundaries
+
+  + Access shapefiles using `map_data()` 
+  
+3. Merge state-specific data with state boundaries (using `left_join()`)
+
+  + Using `left_join()` or `merge` 
+  
+
+4. Plot the data!
+
+  + Create choropleths displaying regions colored by variable of interest
+  
+
+---
+
+## Get state-specific data...
+
+```{r}
+head(state_data)
+```
+
+
+
+---
+
+## Access shapefiles using `map_data()` 
+
+
+```{r}
+library(maps)
+state_borders <- map_data("state") 
+head(state_borders)
+```
+
+- For example: `map_data("world")`, `map_data("state")`, `map_data("county")` (need to install [`maps` package](https://cran.r-project.org/web/packages/maps/maps.pdf))
+
+- Contains lat/lon coordinates to draw geographic boundaries
+
+
+---
+
+## Merge state-specific data with state boundaries
+
+```{r}
+state_plot_data <- state_borders %>%
+  left_join(state_data, #<<
+            by = c("region" = "state")) #<<
+```
+
+
+--
+
+What it looks like after merging:
+
+```{r}
+head(state_plot_data)
+```
+
+
+---
+
+## Create a choropleth map with `geom_polygon()`
+
+.pull-left[
+
+```{r choropleth, eval = FALSE}
+state_plot_data %>%
+  ggplot() + 
+  geom_polygon(aes(x = long, y = lat, 
+                   group = group,
+                   fill = Illiteracy), 
+               color = "black") + 
+  scale_fill_gradient2(
+    low = "darkgreen",
+    mid = "lightgrey", 
+    high = "darkorchid4",
+    midpoint = 0.95) +
+  theme_void() +
+  coord_map("polyconic") + 
+  labs(fill = "Illiteracy %") + 
+  theme(legend.position = "bottom")
+```
+
+
+]
+.pull-right[
+```{r ref.label="choropleth", fig.height=8, echo = FALSE}
+
+```
+
+]
+
+---
+
+## Uniform size with [`statebins`](https://github.com/hrbrmstr/statebins)
+
+.pull-left[
+
+```{r bin-map, eval = FALSE}
+library(statebins)
+state_data$new_state <- 
+  str_to_title(state_data$state)
+statebins(state_data = state_data, #<<
+          state_col = "new_state",
+          value_col = "Illiteracy") +
+  theme_statebins()
+
+```
+
+- Make all states equal in size
+
+- Keeps spatial arrangement but focus is on the variable of interest displayed by the color
+
+]
+
+.pull-right[
+```{r ref.label="bin-map", echo = FALSE, fig.height=8}
+
+```
+
+]
+
+
+---
+
+## Inference for Areal Data
+
+For areal data, we have the following variables:
+
++ Geographic region: $g$
+
++ Outcome variable: $z$
+
+--
+
+$g$ is categorical, so visualization/inference involves categorical data.
+
+If $g$ only has a few categories, can just do ANOVA and side-by-side violins (or other displays we've talked about).
+
+#### What to do if there are many regions?
+
+Two approaches: Dendrograms and randomization tests.
+
+---
+
+## Dendrograms for Areal Data
+
+#### Recall: Dendrograms allow you to see which subjects are _similar_ and which are _dissimilar_ in terms of one or more variables
+
+Intuition: Allows you to see which geographic regions are similar
+
+--
+
+To create a dendrogram:
+
+1. Define a distance metric in terms of the outcome.
+
+2. Plot a dendrogram.
+
+3. Make the leaf labels correspond to geographic regions.
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=6}
+# Remember that we have to scale our data when creating dendrograms
+illit_scaled <- state_data$Illiteracy / sd(state_data$Illiteracy)
+# distance matrix for our dataset
+illit_dist <- dist(illit_scaled)
+# run hierarchical clustering
+illit_hc <- hclust(illit_dist, method = "complete")
+# convert to a dendrogram type object
+illit_dend <- as.dendrogram(illit_hc)
+
+#We'll need the following library to make the dendrogram
+#more graphically pleasing:
+library(dendextend)
+
+# first, let's change the labels according to the state abbreviations
+# (which is available in the datasets library, which we loaded earlier)
+illit_dend <- set(illit_dend, "labels", state.abb, order_value = T)
+
+#We will also color the labels by the region of the state.
+stat_region_colors <- ifelse(state.region == "Northeast", "darkgreen",
+                             ifelse(state.region == "South", "purple",
+                                    ifelse(state.region == "North Central", "orange",
+                                           "blue")))
+#Set the leaf labels according to the above colors:
+illit_dend <- set(illit_dend, "labels_colors", stat_region_colors, order_value = T)
+# plot the dendrogram
+plot(illit_dend)
+```
+
+
+---
+
+## Visual Randomization Tests
+
+So, we wanted to see if illiteracy rates depended on geography...
+
+#### Consider the null hypothesis: Illiteracy doesn't depend on geography
+
++ If the null hypothesis is true, what are the chances that our map just happened by chance?
+
+--
+
+Important to ponder, because humans are very tempted to see patterns in maps that aren't actually there...
+
+```{r, echo = FALSE, fig.align='center', out.width="45%"}
+knitr::include_graphics("https://external-preview.redd.it/mNnevchKG3-dc3hadYi43sYB9GetG4B3ZwFe3EHr8w8.jpg?auto=webp&s=cf3c3d4f1f3213dee49381e7055d1e6bf9660d81")
+```
+
+
+#### How do we know the spatial pattern we're seeing is really a pattern and not just random noise?
+
+---
+
+## Visual Randomization Tests
+
+#### Consider the null hypothesis: Illiteracy doesn't depend on geography
+
++ If the null hypothesis is true, what are the chances that our map just happened by chance?
+
+--
+
+#### Randomization Test:
+
+1. Plot areal map with the actual outcomes.
+
+2. Shuffle the outcomes across geographic regions several times.
+
+3. Plot several __shuffled__ areal maps.
+
+4. Show someone the __true__ areal map among the __shuffled__ areal maps in a random order... Can they pick out the real one?
+
+--
+
+#### If so, then the map is _significantly non-random_ in terms of geography
+
+---
+
+## Can you spot the real map?
+
+```{r, echo = FALSE, fig.align='center'}
+
+# It'll be helpful to write a function that automatically makes a ggplot for us.
+# This is literally the same code we used to generate the original areal map above, but for any dataset called "state_data".
+get_state_map_illit <- function(state_data){
+  plot <- ggplot(state_data) + 
+    geom_polygon(aes(x = long, y = lat, group = group,
+                     fill = Illiteracy), color = "black") +
+    scale_fill_gradient2(low = "darkgreen", mid = "lightgrey", 
+                         high = "darkorchid4", midpoint = 0.95) +
+    theme_void() +
+    coord_map("polyconic")
+  return(plot)
+}
+
+# Now we're going to permute (i.e., "shuffle") the outcomes a few times. 
+# number of randomizations/permutations/shuffles:
+n_shuffles <- 9
+
+
+plot_list <- list(length = n_shuffles)
+# Will use a for loop to do this
+for(i in 1:n_shuffles){
+  # create a "randomized" dataset
+  state_plot_data_rand <- state_plot_data
+  # shuffle the outcomes
+  state_plot_data_rand$Illiteracy <- sample(state_plot_data_rand$Illiteracy)
+  # create the plot and store it
+  plot_list[[i]] = get_state_map_illit(state_plot_data_rand)
+}
+
+# pick a random entry of plot_list to be the "real" plot
+plot_list[[sample(1:n_shuffles, size = 1)]] = get_state_map_illit(state_plot_data)
+
+# Plot all the plots together using the cowplot package:
+# install.packages("cowplot")
+library(cowplot)
+
+# Grab the legend for just the first plot, since they are all the same
+map_legend <- get_legend(plot_list[[1]])
+
+legend_free_plot_list <- 
+  lapply(1:length(plot_list),
+         function(i) plot_list[[i]] + theme(legend.position = "none"))
+
+plot_grid(
+  plot_grid(plotlist = legend_free_plot_list, ncol = 3),
+  map_legend, ncol = 2,
+  # Adjust so the maps are much larger:
+  rel_widths = c(4, 1)
+)
+```
+
+
+---
+
+## Main Takeaways
+
+#### Create choropleths for areal data: color regions by variable of interest
+
++ Requires workflow to join region level data with polygon boundaries for regions
+
+#### Can perform classical type categorical type inference 
+
+#### Use dendrograms to visualize differences between regions based on variable of interest
+
+#### Can perform visual randomization test to test signficance of observed data
+
++ _Is it practical though?_
+
+--
+
+__HW7 is due TONIGHT AND Graphics Critique due FRIDAY!__
+
+Review more code in Lecture 19 Demo! 
+
+Recommended reading: 
+
++ [CW Chapter 15 Visualizing geospatial data](https://clauswilke.com/dataviz/geospatial-data.html)
+
++ [KH Chapter 7 Draw Maps](https://socviz.co/maps.html#maps)
+
