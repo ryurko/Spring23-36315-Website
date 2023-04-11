@@ -1,0 +1,512 @@
+---
+title: "36-315 Lecture 21"
+subtitle: "Time Series: Trends, Autocorrelation, and Seasonal Decompositions"  
+author: 
+  - "Professor Ron Yurko"
+date: '4/12/2023'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE,
+  fig.path = "figs/lec21/"
+)
+
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#c41230",
+  secondary_color = "#0277BD",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+```
+
+# Things of interest for time series data
+
+Time series can be characterized by three features:
+
+1. __Trends__: Does the variable increase or decrease over time, on average?
+
+2. __Seasonality__: Are there changes in the variable that regularly happen (e.g., every winter, every hour, etc.)? Sometimes called periodicity.
+
+3. __Noise__: Variation in the variable beyond average trends and seasonality.
+
+--
+
+#### Moving averages are a starting point for visualizing how a trend changes over time
+
+---
+
+```{r, echo = FALSE, fig.align='center', out.width="80%"}
+knitr::include_graphics("https://www.ft.com/__origami/service/image/v2/images/raw/https%3A%2F%2Fd6c748xw2pzm8.cloudfront.net%2Fprod%2Fc7ce2780-2f14-11eb-8e8a-cdb0723f9e68-standard.png?dpr=1&fit=scale-down&quality=highest&source=next&width=700")
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center'}
+knitr::include_graphics("https://icharts.coinlore.com/img/simple-moving-averages-ftx-token.jpg?time=1680119681")
+```
+
+
+---
+
+### Be responsible with your axes!
+
+```{r, echo = FALSE, fig.align='center', out.width="50%"}
+knitr::include_graphics("https://cdn.sisense.com/wp-content/uploads/National-Review-Climate-Change-770x689.png")
+```
+
+
+---
+
+### Be responsible with your axes!
+
+```{r, echo = FALSE, fig.align='center', out.width="50%"}
+knitr::include_graphics("http://www.washingtonpost.com/blogs/the-fix/files/2015/12/NRO_Temp_1.jpg")
+```
+
+
+---
+
+## Moving Average Plots
+
+The _Financial Times_ COVID-19 plots displayed a __moving average__ (sometimes called a __rolling average__)
+
+#### Intuition
+
+1. Divide your data into small subsets ("windows")
+
+2. Compute the average within each window
+
+3. Connect the averages together to make a trend line
+
+--
+
+Sometimes called a __simple moving average__
+
+This is exactly what we did when we learned loess... we called this a _sliding window_, but it's the same thing
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+
+co2_tbl <- tibble(co2_val = as.numeric(co2)) %>%
+  mutate(obs_i = 1:n())
+
+co2_tbl <- co2_tbl %>%
+  # We can use the seq() function with dates which is pretty useful!
+  mutate(obs_date = seq(as.Date("1/1/1959", format = "%m/%d/%Y"), 
+                        by = "month",
+                        length.out = n()))
+
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_point(color = "red") + 
+  labs(x = "Year", y = "CO2 (ppm)",
+       title = "CO2 Emissions Over Time")
+
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_point(color = "red") + 
+  geom_line(color = "red") +
+  labs(x = "Year", y = "CO2 (ppm)",
+       title = "CO2 Emissions Over Time")
+
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color = "red") +
+  labs(x = "Year", y = "CO2 (ppm)",
+       title = "CO2 Emissions Over Time")
+
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+library(ggseas)
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 12, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "CO2 Emissions Over Time")
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  #geom_line(color="red") +
+  stat_rollapplyr(width = 12, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "CO2 Emissions Over Time")
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 12, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "CO2 Emissions Over Time")
+```
+
+
+---
+
+## How are moving averages computed?
+
+#### Intuition
+
+1. Divide your data into small subsets (_windows_)
+
+2. Compute the average within each window
+
+3. Connect the averages together to make a trend line
+
+--
+
+Mathematically, a moving average can be written as the following:
+
+$$\mu_k = \frac{\sum_{t=k - h + 1}^k X_t}{h}$$
+
++ Large $h$: Smooth line; captures global trends
+
++ Small $h$: Jagged/volatile line; captures local trends
+
+
+---
+
+# R Demo: Working with Time Series
+
+`co2`: the Mauna Loa Atmospheric CO2 Concentration dataset\
+
++ Contains monthly $\text{CO}^2$ concentration from 1959 to 1997
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=3}
+
+co2_tbl %>%
+  ggplot(aes(x = obs_i, y = co2_val)) + 
+  geom_line() + 
+  labs(x = "Time index", y = "CO2 (ppm)")
+
+```
+
+
+---
+
+## Formatting Dates
+
+Can use `as.Date()` to create time indexes.
+
+
+```{r, echo = FALSE, fig.align='center', fig.height=3}
+
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line() + 
+  labs(x = "Year", y = "CO2 (ppm)")
+
+```
+
+Default format is Year/Month/Day. For something else, need to specify `format` in `as.Date()` (e.g., `format = "%m/%d/%Y"`)
+
+---
+
+### Use `scale_x_date()` to create interpretable axis labels 
+
+```{r, echo = FALSE, fig.align='center', fig.height=4}
+co2_tbl[1:26,] %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line() + 
+  scale_x_date(date_breaks = "4 months", date_labels = "%b %Y") +
+  labs(x = "Year", y = "CO2 (ppm)") +
+  # Modify the x-axis text 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+```
+
+
+---
+
+### Use [`ggseas`](https://cran.r-project.org/web/packages/ggseas/vignettes/ggseas.html) package to plot moving averages
+
+
+```{r init-moving, fig.align='center'}
+library(ggseas)
+co2_tbl %>% ggplot(aes(x = obs_date, y = co2_val)) + geom_line(color = "red") + 
+  stat_rollapplyr(width = 12, align = "right") + #<<
+  labs(x = "Year", y = "CO2 (ppm)", title = "Width = 12")
+```
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+library(patchwork)
+wid2 <- co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 2, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "Width = 2")
+
+wid24 <- co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 24, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "Width = 24")
+wid2 + wid24
+```
+
+
+
+---
+
+```{r, echo = FALSE, fig.align='center', fig.height=5}
+co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 100, align = "right") + #<<
+  labs(x = "Year", y = "CO2 (ppm)", 
+       title = "Width = 100")
+```
+
+
+---
+
+## Other Moving Averages
+
+
+Two other common averages: Cumulative moving averages and weighted moving averages.
+
++ __Cumulative moving average__: The average at time $k$ is the average of all points at and before $k$. Mathematically:
+
+$$\mu_k^{(CMA)} = \frac{\sum_{t=1}^k X_t}{k}$$
+
+--
+
++ __Weighted moving average__: Same as simple moving average, but different measurements get different weights for the average.
+
+$$\mu_k^{(WMA)} = \frac{\sum_{t=k - h + 1}^k X_t \cdot w_t}{ \sum_{t=k - h + 1}^k w_t}$$
+--
+
+For the simple moving average, $w_t = 1$ for all time points.
+
++ May want to up-weight points close in time to $k$.
+
+---
+
+## Working with lags
+
+Time series data is fundamentally different from other data problems we've worked with because measurements are  __not independent__
+
+Obvious example: The temperature today is correlated with temperature yesterday. (_Maybe not in Pittsburgh?_)
+
+--
+
+Important term: __lags__. Used to determine if one time point influences future time points.
+
+Lag 1: Comparing time series at time $t$ with time series at time $t - 1$. 
+
+Lag 2: Comparing time series at time $t$ with time series at time $t - 2$.
+
+And so on...
+
+--
+
+Let's say we have time measurements $(X_1, X_2, X_3, X_4, X_5)$. 
+
+The $\ell = 1$ lag is $(X_2, X_3, X_4, X_5)$ vs $(X_1, X_2, X_3, X_4)$. 
+
+--
+
+The $\ell = 2$ lag is $(X_3, X_4, X_5)$ vs $(X_1, X_2, X_3)$.
+
+Consider: Are previous outcomes (lags) predictive of future outcomes?
+
+---
+
+## Autocorrelation
+
+__Autocorrelation__: Correlation between a time series and a lagged version of itself.
+
+Define $r_{\ell}$ as the correlation between a time series and Lag $\ell$ of that time series.
+
+--
+
+Lag 1: $r_1$ is correlation between $(X_2, X_3, X_4, X_5)$ and $(X_1,X_2,X_3,X_4)$ 
+
+Lag 2: $r_2$ is correlation between $(X_3, X_4, X_5)$ and $(X_1,X_2,X_3)$
+
+And so on...
+
+--
+
+Common diagnostic: Plot $\ell$ on x-axis, $r_{\ell}$ on y-axis.
+
+Tells us if correlations are "significantly large" or "significantly small" for certain lags
+
+To make an autocorrelation plot, we use the `acf()` function; the `ggplot` version uses `autoplot()`
+
+---
+
+## Autocorrelation plots
+
+
+```{r}
+library(ggfortify)
+auto_corr <- acf(co2_tbl$co2_val, plot = FALSE)
+autoplot(auto_corr)
+```
+
+
+---
+
+### Autocorrelation Plots and Seasonality
+
+With strong global trends, autocorrelations will be very positive.
+
+--
+
+#### Helpful: Visualize autocorrelations after removing the global trend (compute moving average with `rollapply()`)
+
+
+```{r, echo = FALSE, fig.align='center'}
+wid12 <- co2_tbl %>%
+  ggplot(aes(x = obs_date, y = co2_val)) + 
+  geom_line(color="red") +
+  stat_rollapplyr(width = 12, align = "right") +
+  labs(x = "Year", y = "CO2 (ppm)")
+
+co2_tbl <- co2_tbl %>%
+  mutate(mov_ave = 
+           zoo::rollapply(co2_val, width = 12, FUN = "mean", 
+                          align = "right", fill = NA),
+         res = co2_val - mov_ave)
+
+resid_plot <- co2_tbl %>%
+  ggplot(aes(x = obs_date, y = res)) +
+  geom_line() +
+  labs(x = "Year", y = "Residuals of CO2 (ppm)")
+
+wid12 + resid_plot
+```
+
+
+---
+
+## Autocorrelation Plots and Seasonality
+
+```{r, echo = FALSE, fig.align='center'}
+autoplot(acf(tail(co2_tbl$res, -11), plot = FALSE))
+```
+
+---
+
+### Seasonality Decomposition
+
+Remember that there are three main components to a time series:
+
+1. Average trends
+
+2. Seasonality
+
+3. Noise
+
+--
+
+Use `ggsdc()` (from [`ggseas`](https://cran.r-project.org/web/packages/ggseas/vignettes/ggseas.html)) to decompose a time series into these three components
+
++ Plots the observed time series.
+
++ Plots a loess curve as the global trend.
+
++ Plots another loess curve on (observed - trend) as the seasonality.
+
++ Plots the noise (observed - trend - seasonality).
+
+---
+
+### Seasonality Decomposition
+
+
+```{r, fig.align='center'}
+co2_tbl %>%
+  ggsdc(aes(obs_date, co2_val), frequency = 12, method = "stl", s.window = 12) + #<<
+  geom_line() + labs(x = "Year", y = "CO2 (ppm)")
+```
+
+---
+
+## Main Takeaways
+
+#### Fundamental characteristic of time series data: measurements are dependent over time
+
+#### Plotting moving averages is the most common way to visualize time series data
+
+The things to look out for in time series data are:
+
++ Average trends
+
++ Seasonality
+
++ Noise
+
+#### Autocorrelation plots are also useful for assessing average trends and seasonality.
+
+#### In time series especially, axes play an important role, so be responsible!
+
+--
+
+__HW8 is due Thursday April 20th!__
+
+Review more code in Lecture 21 Demo! 
+
