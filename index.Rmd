@@ -44,6 +44,7 @@ Lecture slides are available below in html format (see Canvas for PDF format), a
 | 19      | Visualizations and Inference for Areal Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/lec19#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/lec19.Rmd) |
 | 20      | Visualizing Trends and Animations | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/lec20#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/lec20.Rmd) |
 | 21      | Time Series: Trends, Autocorrelation, and Seasonal Decompositions | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/lec21#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/lec21.Rmd) |
+| 22      | Visualizing Text Data | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/slides/lec22#1) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/slides/lec22.Rmd) |
 
 
 
@@ -65,6 +66,7 @@ Additional `R` demos are available below in html format.
 | 10     | Lecture 19 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture19_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture19_R_Demo.Rmd) |
 | 11     | Lecture 20 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture20_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture20_R_Demo.Rmd) |
 | 12     | Lecture 21 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture21_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture21_R_Demo.Rmd) |
+| 13     | Lecture 22 | [`r icons::fontawesome$solid$laptop`](https://cmu-36315-spring23.netlify.app/demos/Lecture22_R_Demo.html) | [`r icons::fontawesome$brands$github`](https://github.com/ryurko/Spring23-36315-Website/blob/main/demos/Lecture22_R_Demo.Rmd) |
 
 
 
