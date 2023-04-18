@@ -1,0 +1,408 @@
+---
+title: "36-315 Lecture 23"
+subtitle: "Topic Models"  
+author: 
+  - "Professor Ron Yurko"
+date: '4/19/2023'
+output:
+  xaringan::moon_reader:
+    css: xaringan-themer.css
+    lib_dir: libs
+    nature:
+      slideNumberFormat: "%current%"
+      highlightStyle: github
+      highlightLines: true
+      ratio: 16:9
+      countIncrementalSlides: false
+---
+
+```{r setup, include=FALSE}
+options(htmltools.dir.version = FALSE)
+knitr::opts_chunk$set(
+  fig.width=9, fig.height=3.5, fig.retina=3,
+  out.width = "100%",
+  cache = FALSE,
+  echo = TRUE,
+  message = FALSE, 
+  warning = FALSE,
+  hiline = TRUE,
+  fig.path = "figs/lec23/"
+)
+
+xaringanExtra::use_clipboard()
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringanthemer)
+style_duo_accent(
+  primary_color = "#c41230",
+  secondary_color = "#0277BD",
+  inverse_header_color = "#FFFFFF"
+)
+```
+
+
+```{r, include = FALSE}
+library(tidyverse)
+```
+
+## Conceptual Review
+
+#### Last class: Started talking about text data. 
+
+In particular:
+
+- Bag of Words representation of text: Text $\rightarrow$ Word Counts
+
+- Processing text: Removing _stop_ words and performing _stemming._
+
+- Word clouds
+
+- TF-IDF weighting
+
+- Sentiment Analysis 
+
+--
+
+#### Today: Topic modeling
+
+- This is only a tease of topic modeling, not a full deep dive
+
+- Make sure to read through the lecture 23 demo! 
+
+---
+
+## Topic Modeling
+
+Everything we've done still involves word counts in some way.
+
+Still have to deal with the high-dimensionality of individual words.
+
+--
+
+#### Topic modeling: Envisions that there are just a few latent ("hidden") categories for each document
+
+- These latent categories are called __topics__ 
+
+- Each __topic__ encompasses a bunch of words that tend to occur together
+
+--
+
+The workflow for topic modeling is:
+
+> Document-Term Matrix $\rightarrow$ Latent Dirichlet Allocation $\rightarrow$ $k$ topics
+
+--
+
+#### Allows you to find $k$ overall _topics_ that are being discussed across your documents
+
+---
+
+## Hierarchy of Topic Modeling
+
+Say we have documents $D_1, \dots, D_N$ and $1000$ words...
+
+
+Hypothesis behind topic modeling: 
+
+_Maybe these $N$ documents are really just about $k = 2$ topics (we could make $k$ bigger if we want)_
+
+--
+
+__Topic__: A collection of words with different probabilities of occurring.
+
+- Topic A: $\beta_1^{A} =$ probability of Word 1, $\beta_2^{A} =$ probability of Word 2, etc.
+
+- Topic B: $\beta_1^{B} =$ probability of Word 1, $\beta_2^{B} =$ probability of Word 2, etc.
+
+--
+
+Words may be prominent in both topics (e.g., $\beta_1^{A} = \beta_1^{B} = 0.8$) or rare in both topics. 
+$\sum_{j=1}^{1000} \beta_j^{A} = 1$, but no constraint on $\beta_j^{A} + \beta_j^{B}$ for any $j$.
+
+--
+
+__Document__: A collection of topics with different proportions. 
+
+- Document 1: 
+
+  - $\gamma_A =$ proportion of Topic A, 
+  
+  - $\gamma_B =$ proportion of Topic B.
+  
+For each document, $\gamma_A + \gamma_B = 1$
+
+---
+
+## Data generating process
+
+This perspective creates a __generative model__ for text:
+
+1. For each document, pick a topic with probabilities: $\gamma_A$ and $\gamma_B$
+
+  - e.g., $\gamma_A = 60\%, \gamma_B = 40\%$
+
+2. Given a topic, choose the words with probabilities defined by $\beta$s
+
+  - If $\gamma_A = 60\%, \gamma_B = 40\%$ for Document 1, then 60% of the time we'll use the $\beta_1^{A}, \beta_2^{A},\dots,\beta_{1000}^A$ probabilities for generating words, and 40% of the time we'll use the $\beta_1^{B}, \beta_2^{B},\dots,\beta_{1000}^B$
+
+---
+
+## What does topic modeling give us?
+
+For simplicity, let's say that we have two topics, A and B.
+
+After we run topic modeling, we will get the following information:
+
+- For _each document_, we will get topic proportions $\gamma_A$ and $\gamma_B$
+
+- For _each topic_, we will get word probabilities $\beta_1, \dots, \beta_J$
+
+--
+
+After running topic modeling, first you should understand what __topics__ have been identified.
+
+Intuition: For each topic, which words are most likely?\
+
+Can visualize top words within each topic:
+
+- Compute Top 10 $\beta_1, \dots, \beta_J$ for _each_ topic.
+  
+- Then, plot the Top 10 for each topic.
+  
+- This can be done with a bar plot, where the $\beta_1,\dots,\beta_J$ are the height of the bars.
+  
+- Can also make a word cloud, where the $\beta_1,\dots,\beta_J$ are the word sizes.
+
+---
+
+## Stranger Things topic models
+
+Lecture 23 demo using [dialogue from Stranger Things](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-10-18)
+
+```{r}
+library(tidyverse)
+stranger_things_text <-
+  read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-18/stranger_things_all_dialogue.csv') %>%
+  # Drop any lines with missing dialogue
+  filter(!is.na(dialogue))
+head(stranger_things_text)
+```
+
+See lecture 23 demo for all pre-processing steps
+
+```{r, include = FALSE}
+stranger_things_text <- stranger_things_text %>%
+  # Use the unite function 
+  unite("episode_id", season:episode,
+        # Keep the columns we're merging
+        remove = FALSE,
+        # Use the default separator:
+        sep = "_") %>%
+  dplyr::select(season, episode_id, dialogue)
+
+library(tidytext)
+stranger_things_words <- stranger_things_text %>%
+  unnest_tokens(word, dialogue)
+
+# load stop words in the tidytext package
+data(stop_words)
+
+# Next we can use the filter function to remove all stop words:
+stranger_things_words <- stranger_things_words %>%
+  filter(!(word %in% stop_words$word))
+
+library(SnowballC)
+
+stranger_things_words <- stranger_things_words %>%
+  # Create a new column stem with the wordStem function:
+  mutate(stem = wordStem(word))
+
+st_episode_stem_summary <- stranger_things_words %>%
+  # While we technically don't need the season column here, we'll just keep it
+  # for reference to have for later:
+  group_by(season, episode_id, stem) %>%
+  # Summarize with the count function:
+  count() %>%
+  # Ungroup
+  ungroup()
+```
+
+---
+
+## Convert to input for `topicmodels` package
+
+Need to covert `tidytext` output to `DocumentTermMatrix` object:
+
+```{r episode_dtm}
+episode_dtm <- st_episode_stem_summary %>%
+  # Using the stems
+  cast_dtm(episode_id, stem, n) #<<
+
+episode_dtm
+```
+
+
+---
+
+## Fit LDA model with `topicmodels`
+
+Fit LDA model with specified `k` topics:
+
+```{r st_lda}
+library(topicmodels)
+
+# set a seed so that the output of the model is predictable
+st_lda <- LDA(episode_dtm, k = 2, control = list(seed = 1234))
+st_lda
+```
+
+
+--
+
+There are two quantities we'll grab from LDA:
+
+- `gamma`: Topic proportions for each document
+
+- `beta`: Word probabilities for each topic
+
+---
+
+## Working with $\beta$s
+
+For any topic $t$, we'll have probabilities $\beta_1^{(t)},\dots,\beta_J^{(t)}$
+
+```{r}
+st_topics <- tidy(st_lda, matrix = "beta")
+st_topics
+```
+
+
+---
+
+## Working with $\beta$s
+
+Using `group_by()` and `top_n()`, can find the top $\beta$s for each topic
+
+```{r toptermsplot, echo = FALSE, fig.align='center'}
+# Grab the words with the top ten probabilities (betas), and then organize 
+# the data by topic, decreasing by beta
+st_top_terms <- st_topics %>%
+  group_by(topic) %>%
+  top_n(10, beta) %>%
+  ungroup() %>%
+  arrange(topic, -beta)
+
+# Plot the data such that there is a plot for each topic, and the probabilities
+# are in decreasing order. There are many ways to do this, and this is just one:
+st_top_terms %>%
+  mutate(term = reorder_within(term, beta, topic)) %>%
+  ggplot(aes(term, beta, fill = factor(topic))) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~ topic, scales = "free") +
+  coord_flip() +
+  scale_x_reordered()
+```
+
+
+---
+
+## Finding Important Words
+
+#### Which words are likely in Topic 2 _but not_ Topic 1?
+
+This is what TF-IDF weights are for, but unfortunately you can't use TF-IDF with topic modeling in this form...
+
+--
+
+Intuition: What $\beta$s are big in Topic 2 _but not_ Topic 1?
+
+- Let $\beta_1^{(1)}, \dots, \beta_J^{(1)}$ be the Topic 1 word probabilities
+
+- Let $\beta_1^{(2)}, \dots, \beta_J^{(2)}$ be the Topic 2 word probabilities
+
+--
+
+Consider the following quantity:
+
+$$\begin{align*}
+      \log \frac{\beta_j^{(2)}}{\beta_j^{(1)}}
+    \end{align*}$$
+    
+
+- When $\beta_j^{(2)} \approx \beta_j^{(1)}$, this will be close to 0.
+
+- When $\beta_j^{(2)} >> \beta_j^{(1)}$, this will be very positive.
+
+- When $\beta_j^{(2)} << \beta_j^{(1)}$, this will be very negative.
+
+---
+
+## Finding Important Words
+
+
+Here's a visual of $\log \frac{\beta_j^{(2)}}{\beta_j^{(1)}}$:
+
+```{r, echo = FALSE, fig.align='center'}
+
+beta_spread <- st_topics %>%
+  mutate(topic = paste0("topic", topic)) %>%
+  pivot_wider(names_from = topic, values_from = beta) %>%
+  filter(topic1 > .001 | topic2 > .001) %>%
+  mutate(log_ratio = log2(topic2 / topic1)) %>%
+  arrange(log_ratio)
+
+beta_spread %>%
+  group_by(direction = log_ratio > 0) %>%
+  top_n(10, abs(log_ratio)) %>%
+  ungroup() %>%
+  mutate(term = reorder(term, log_ratio)) %>%
+  ggplot(aes(term, log_ratio, fill = direction)) +
+  geom_col(show.legend = FALSE) +
+  labs(y = "Log2 ratio of beta in topic 2 / topic 1") +
+  coord_flip()
+
+```
+
+---
+
+## What to do after you've identified topics...
+
+Recall: Each document will have topic proportions $\gamma_1,\dots,\gamma_k$ where for each document $i$, $\sum_{j=1}^k \gamma_j^{(i)} = 1$
+
+```{r}
+st_documents <- tidy(st_lda, matrix = "gamma") #<<
+st_documents %>%
+  filter(document %in% c("1_1", "4_1"))
+```
+
+--
+
+It can be helpful to see how these $\gamma$ vary across different kinds of documents. For example:
+
+- Plot each $\gamma$ over time (if your documents have a timestamp)
+
+- Examine the $\gamma$ for different authors of documents.
+
+- Measure the "distance" between documents based on topic usage.
+
+---
+
+## Main Takeaways
+
+#### Topic models are the most complex method we've done in this class
+
+All you need to know is that topic modeling gives you two things:
+
+#### Topic Proportions: For each document, what is the proportion of each topic?
+
+#### Word Probabilities: For each topic, what is the probability of a certain word occurring?
+
+--
+
+__HW8 is due Thursday April 20th!__
+
+Review more code in Lecture 23 Demo! 
+
+Recommended reading: [Text Mining With R](https://www.tidytextmining.com/), [Supervised Machine Learning for Text Analysis in R](https://smltar.com/)
+

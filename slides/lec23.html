@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>36-315 Lecture 23</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Professor Ron Yurko" />
+    <script src="libs/header-attrs/header-attrs.js"></script>
+    <script src="libs/clipboard/clipboard.min.js"></script>
+    <link href="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="libs/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"Copy Code","success":"Copied!","error":"Press Ctrl+C to Copy"})</script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# 36-315 Lecture 23
+]
+.subtitle[
+## Topic Models
+]
+.author[
+### Professor Ron Yurko
+]
+.date[
+### 4/19/2023
+]
+
+---
+
+
+
+
+
+
+
+
+
+## Conceptual Review
+
+#### Last class: Started talking about text data. 
+
+In particular:
+
+- Bag of Words representation of text: Text `\(\rightarrow\)` Word Counts
+
+- Processing text: Removing _stop_ words and performing _stemming._
+
+- Word clouds
+
+- TF-IDF weighting
+
+- Sentiment Analysis 
+
+--
+
+#### Today: Topic modeling
+
+- This is only a tease of topic modeling, not a full deep dive
+
+- Make sure to read through the lecture 23 demo! 
+
+---
+
+## Topic Modeling
+
+Everything we've done still involves word counts in some way.
+
+Still have to deal with the high-dimensionality of individual words.
+
+--
+
+#### Topic modeling: Envisions that there are just a few latent ("hidden") categories for each document
+
+- These latent categories are called __topics__ 
+
+- Each __topic__ encompasses a bunch of words that tend to occur together
+
+--
+
+The workflow for topic modeling is:
+
+&gt; Document-Term Matrix `\(\rightarrow\)` Latent Dirichlet Allocation `\(\rightarrow\)` `\(k\)` topics
+
+--
+
+#### Allows you to find `\(k\)` overall _topics_ that are being discussed across your documents
+
+---
+
+## Hierarchy of Topic Modeling
+
+Say we have documents `\(D_1, \dots, D_N\)` and `\(1000\)` words...
+
+
+Hypothesis behind topic modeling: 
+
+_Maybe these `\(N\)` documents are really just about `\(k = 2\)` topics (we could make `\(k\)` bigger if we want)_
+
+--
+
+__Topic__: A collection of words with different probabilities of occurring.
+
+- Topic A: `\(\beta_1^{A} =\)` probability of Word 1, `\(\beta_2^{A} =\)` probability of Word 2, etc.
+
+- Topic B: `\(\beta_1^{B} =\)` probability of Word 1, `\(\beta_2^{B} =\)` probability of Word 2, etc.
+
+--
+
+Words may be prominent in both topics (e.g., `\(\beta_1^{A} = \beta_1^{B} = 0.8\)`) or rare in both topics. 
+`\(\sum_{j=1}^{1000} \beta_j^{A} = 1\)`, but no constraint on `\(\beta_j^{A} + \beta_j^{B}\)` for any `\(j\)`.
+
+--
+
+__Document__: A collection of topics with different proportions. 
+
+- Document 1: 
+
+  - `\(\gamma_A =\)` proportion of Topic A, 
+  
+  - `\(\gamma_B =\)` proportion of Topic B.
+  
+For each document, `\(\gamma_A + \gamma_B = 1\)`
+
+---
+
+## Data generating process
+
+This perspective creates a __generative model__ for text:
+
+1. For each document, pick a topic with probabilities: `\(\gamma_A\)` and `\(\gamma_B\)`
+
+  - e.g., `\(\gamma_A = 60\%, \gamma_B = 40\%\)`
+
+2. Given a topic, choose the words with probabilities defined by `\(\beta\)`s
+
+  - If `\(\gamma_A = 60\%, \gamma_B = 40\%\)` for Document 1, then 60% of the time we'll use the `\(\beta_1^{A}, \beta_2^{A},\dots,\beta_{1000}^A\)` probabilities for generating words, and 40% of the time we'll use the `\(\beta_1^{B}, \beta_2^{B},\dots,\beta_{1000}^B\)`
+
+---
+
+## What does topic modeling give us?
+
+For simplicity, let's say that we have two topics, A and B.
+
+After we run topic modeling, we will get the following information:
+
+- For _each document_, we will get topic proportions `\(\gamma_A\)` and `\(\gamma_B\)`
+
+- For _each topic_, we will get word probabilities `\(\beta_1, \dots, \beta_J\)`
+
+--
+
+After running topic modeling, first you should understand what __topics__ have been identified.
+
+Intuition: For each topic, which words are most likely?\
+
+Can visualize top words within each topic:
+
+- Compute Top 10 `\(\beta_1, \dots, \beta_J\)` for _each_ topic.
+  
+- Then, plot the Top 10 for each topic.
+  
+- This can be done with a bar plot, where the `\(\beta_1,\dots,\beta_J\)` are the height of the bars.
+  
+- Can also make a word cloud, where the `\(\beta_1,\dots,\beta_J\)` are the word sizes.
+
+---
+
+## Stranger Things topic models
+
+Lecture 23 demo using [dialogue from Stranger Things](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-10-18)
+
+
+```r
+library(tidyverse)
+stranger_things_text &lt;-
+  read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-10-18/stranger_things_all_dialogue.csv') %&gt;%
+  # Drop any lines with missing dialogue
+  filter(!is.na(dialogue))
+head(stranger_things_text)
+```
+
+```
+## # A tibble: 6 × 8
+##   season episode  line raw_text                  stage…¹ dialo…² start…³ end_t…⁴
+##    &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt; &lt;chr&gt;                     &lt;chr&gt;   &lt;chr&gt;   &lt;time&gt;  &lt;time&gt; 
+## 1      1       1     9 [Mike] Something is comi… [Mike]  Someth… 01'44"  01'48" 
+## 2      1       1    10 A shadow grows on the wa… &lt;NA&gt;    A shad… 01'48"  01'52" 
+## 3      1       1    11 -It is almost here. -Wha… &lt;NA&gt;    It is … 01'52"  01'54" 
+## 4      1       1    12 What if it's the Demogor… &lt;NA&gt;    What i… 01'54"  01'56" 
+## 5      1       1    13 Oh, Jesus, we're so scre… &lt;NA&gt;    Oh, Je… 01'56"  01'59" 
+## 6      1       1    14 It's not the Demogorgon.  &lt;NA&gt;    It's n… 01'59"  02'00" 
+## # … with abbreviated variable names ¹​stage_direction, ²​dialogue, ³​start_time,
+## #   ⁴​end_time
+```
+
+See lecture 23 demo for all pre-processing steps
+
+
+
+---
+
+## Convert to input for `topicmodels` package
+
+Need to covert `tidytext` output to `DocumentTermMatrix` object:
+
+
+```r
+episode_dtm &lt;- st_episode_stem_summary %&gt;%
+  # Using the stems
+* cast_dtm(episode_id, stem, n)
+
+episode_dtm
+```
+
+```
+## &lt;&lt;DocumentTermMatrix (documents: 34, terms: 5602)&gt;&gt;
+## Non-/sparse entries: 20257/170211
+## Sparsity           : 89%
+## Maximal term length: 27
+## Weighting          : term frequency (tf)
+```
+
+
+---
+
+## Fit LDA model with `topicmodels`
+
+Fit LDA model with specified `k` topics:
+
+
+```r
+library(topicmodels)
+
+# set a seed so that the output of the model is predictable
+st_lda &lt;- LDA(episode_dtm, k = 2, control = list(seed = 1234))
+st_lda
+```
+
+```
+## A LDA_VEM topic model with 2 topics.
+```
+
+
+--
+
+There are two quantities we'll grab from LDA:
+
+- `gamma`: Topic proportions for each document
+
+- `beta`: Word probabilities for each topic
+
+---
+
+## Working with `\(\beta\)`s
+
+For any topic `\(t\)`, we'll have probabilities `\(\beta_1^{(t)},\dots,\beta_J^{(t)}\)`
+
+
+```r
+st_topics &lt;- tidy(st_lda, matrix = "beta")
+st_topics
+```
+
+```
+## # A tibble: 11,204 × 3
+##    topic term       beta
+##    &lt;int&gt; &lt;chr&gt;     &lt;dbl&gt;
+##  1     1 00    1.19e-  3
+##  2     2 00    2.36e-  4
+##  3     1 10    2.07e-  4
+##  4     2 10    5.47e-  5
+##  5     1 100   2.15e-  4
+##  6     2 100   2.07e-  4
+##  7     1 12    1.66e-  4
+##  8     2 12    1.09e-  4
+##  9     1 12.3  4.14e-  5
+## 10     2 12.3  6.95e-101
+## # … with 11,194 more rows
+```
+
+
+---
+
+## Working with `\(\beta\)`s
+
+Using `group_by()` and `top_n()`, can find the top `\(\beta\)`s for each topic
+
+&lt;img src="figs/lec23/toptermsplot-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+
+---
+
+## Finding Important Words
+
+#### Which words are likely in Topic 2 _but not_ Topic 1?
+
+This is what TF-IDF weights are for, but unfortunately you can't use TF-IDF with topic modeling in this form...
+
+--
+
+Intuition: What `\(\beta\)`s are big in Topic 2 _but not_ Topic 1?
+
+- Let `\(\beta_1^{(1)}, \dots, \beta_J^{(1)}\)` be the Topic 1 word probabilities
+
+- Let `\(\beta_1^{(2)}, \dots, \beta_J^{(2)}\)` be the Topic 2 word probabilities
+
+--
+
+Consider the following quantity:
+
+`$$\begin{align*}
+      \log \frac{\beta_j^{(2)}}{\beta_j^{(1)}}
+    \end{align*}$$`
+    
+
+- When `\(\beta_j^{(2)} \approx \beta_j^{(1)}\)`, this will be close to 0.
+
+- When `\(\beta_j^{(2)} &gt;&gt; \beta_j^{(1)}\)`, this will be very positive.
+
+- When `\(\beta_j^{(2)} &lt;&lt; \beta_j^{(1)}\)`, this will be very negative.
+
+---
+
+## Finding Important Words
+
+
+Here's a visual of `\(\log \frac{\beta_j^{(2)}}{\beta_j^{(1)}}\)`:
+
+&lt;img src="figs/lec23/unnamed-chunk-5-1.png" width="100%" style="display: block; margin: auto;" /&gt;
+
+---
+
+## What to do after you've identified topics...
+
+Recall: Each document will have topic proportions `\(\gamma_1,\dots,\gamma_k\)` where for each document `\(i\)`, `\(\sum_{j=1}^k \gamma_j^{(i)} = 1\)`
+
+
+```r
+*st_documents &lt;- tidy(st_lda, matrix = "gamma")
+st_documents %&gt;%
+  filter(document %in% c("1_1", "4_1"))
+```
+
+```
+## # A tibble: 4 × 3
+##   document topic     gamma
+##   &lt;chr&gt;    &lt;int&gt;     &lt;dbl&gt;
+## 1 1_1          1 1.00     
+## 2 4_1          1 0.725    
+## 3 1_1          2 0.0000358
+## 4 4_1          2 0.275
+```
+
+--
+
+It can be helpful to see how these `\(\gamma\)` vary across different kinds of documents. For example:
+
+- Plot each `\(\gamma\)` over time (if your documents have a timestamp)
+
+- Examine the `\(\gamma\)` for different authors of documents.
+
+- Measure the "distance" between documents based on topic usage.
+
+---
+
+## Main Takeaways
+
+#### Topic models are the most complex method we've done in this class
+
+All you need to know is that topic modeling gives you two things:
+
+#### Topic Proportions: For each document, what is the proportion of each topic?
+
+#### Word Probabilities: For each topic, what is the probability of a certain word occurring?
+
+--
+
+__HW8 is due Thursday April 20th!__
+
+Review more code in Lecture 23 Demo! 
+
+Recommended reading: [Text Mining With R](https://www.tidytextmining.com/), [Supervised Machine Learning for Text Analysis in R](https://smltar.com/)
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
